@@ -1,0 +1,65 @@
+{
+  "id": "1783825017.8973467",
+  "title": "Add generate_key() Convenience Function",
+  "instructions": "Add a simple, user-friendly function `generate_key()` to the xenco library that provides a one-line interface for generating keys from any source (URL, file, or text) and optionally saving them to a file. This function should wrap the existing KeyGenerator and KeyFile classes to make the library easier to use for simple use cases.",
+  "startTimestamp": 1783825017.8973494,
+  "endTimestamp": 1783825195.4980917,
+  "tasks": {
+    "1783825022.2059548": {
+      "id": "1783825022.2059548",
+      "status": "completed",
+      "instruction": "Add a convenience function `generate_key(source, output_path=None, ascii_from=32, ascii_to=127, pretty=False)` to xenco/keygen.py. This function should:\n  1. Create a KeyGenerator instance with the specified ASCII range\n  2. Generate the key from the source\n  3. If output_path is provided, create a KeyFile and save it\n  4. Return the KeyFile object (or tuple of mappings if no output_path)\n  5. Include proper docstring with examples\n  6. Handle InsufficientSourceError and other exceptions gracefully",
+      "startTimestamp": 1783825046.1717355,
+      "endTimestamp": 1783825111.1386075,
+      "log": [
+        {
+          "timestamp": 1783825046.1718261,
+          "text": "Build started"
+        },
+        {
+          "timestamp": 1783825104.6359022,
+          "text": "Added generate_key() convenience function to xenco/keygen.py. The function accepts source (URL/file/text), optional output_path, ascii_from/to parameters, and pretty flag. Returns KeyFile object when output_path provided, or tuple of (encode_map, decode_map) otherwise. Includes comprehensive docstring with examples. Verified import and basic functionality works."
+        }
+      ]
+    },
+    "1783825025.746377": {
+      "id": "1783825025.746377",
+      "status": "completed",
+      "instruction": "Update xenco/__init__.py to export the new generate_key function so users can access it as `from xenco import generate_key` or `import xenco; xenco.generate_key()`. Add it to the __all__ list and ensure it's imported properly.",
+      "startTimestamp": 1783825111.1386094,
+      "endTimestamp": 1783825142.0590417,
+      "log": [
+        {
+          "timestamp": 1783825139.929992,
+          "text": "Updated xenco/__init__.py to export generate_key function. Added import from keygen module and included it in __all__ list. Verified all import methods work: direct import (from xenco import generate_key), module access (xenco.generate_key), and __all__ membership."
+        }
+      ]
+    },
+    "1783825028.3425322": {
+      "id": "1783825028.3425322",
+      "status": "completed",
+      "instruction": "Create a new example script examples/simple_generate.py that demonstrates the new generate_key() function with:\n  1. Simple key generation from a URL\n  2. Key generation with custom ASCII range\n  3. Key generation without saving (returns mappings)\n  4. Error handling example\n  Include comments explaining each use case.",
+      "startTimestamp": 1783825142.0590434,
+      "endTimestamp": 1783825168.1139708,
+      "log": [
+        {
+          "timestamp": 1783825166.115536,
+          "text": "Created examples/simple_generate.py demonstrating the generate_key() function with 4 comprehensive examples: (1) Simple key generation with file save, (2) Custom ASCII range with pretty printing, (3) Generate without saving (returns mappings tuple), (4) Error handling for insufficient source. Script runs successfully and shows all use cases with clear output."
+        }
+      ]
+    },
+    "1783825033.707402": {
+      "id": "1783825033.707402",
+      "status": "completed",
+      "instruction": "Create unit tests in tests/test_keygen.py for the new generate_key() function. Test cases should cover:\n  1. Successful key generation from text source\n  2. Key generation with output file (verify file is created)\n  3. Key generation without output file (verify mappings returned)\n  4. Custom ASCII range handling\n  5. InsufficientSourceError handling\n  6. Pretty print option\n  Use pytest fixtures and temporary directories for file tests.",
+      "startTimestamp": 1783825168.1139717,
+      "endTimestamp": 1783825195.4980836,
+      "log": [
+        {
+          "timestamp": 1783825193.095382,
+          "text": "Added comprehensive unit tests for generate_key() function in tests/test_keygen.py. Created TestGenerateKeyFunction class with 6 test methods covering: (1) key generation from text source, (2) key generation with output file, (3) return type verification without output, (4) custom ASCII range handling, (5) InsufficientSourceError handling, (6) pretty print option. All tests verified working with manual test run."
+        }
+      ]
+    }
+  }
+}

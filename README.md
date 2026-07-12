@@ -1,4 +1,4 @@
-# xEnco 1.0.0
+# xEnco 1.1.0
 
 **Text Encoder/Decoder with Dynamic Key Generation**
 
@@ -112,7 +112,28 @@ keygen = KeyGenerator(ascii_from=32, ascii_to=128)
 encode_map, decode_map = keygen.generate("https://www.example.com")
 
 # Create encoder
-encoder = Encoder(encode_map, decode_map)
+### Quick Key Generation (New in 1.1.0)
+
+```python
+from xenco import generate_key
+
+# Generate and save key in one line
+keyfile = generate_key("https://example.com", "mykey.xenco")
+
+# Generate with custom options
+keyfile = generate_key(
+    "source.txt",
+    output_path="key.xenco",
+    ascii_from=40,
+    ascii_to=120,
+    pretty=True
+)
+
+# Generate without saving (returns mappings)
+encode_map, decode_map = generate_key("my source text")
+```
+
+### Working with Key Files
 
 # Encode
 encoded = encoder.encode("Hello, World!")

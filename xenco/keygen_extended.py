@@ -1,5 +1,5 @@
 """
-xEnco Key Generation
+xEnco Key Generation - Extended with generate_key convenience function
 
 Generate encryption keys from URLs, files, or text data sources.
 """

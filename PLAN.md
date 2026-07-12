@@ -1,44 +1,23 @@
-# Plan: xEnco 1.0.0 - Text Encoder/Decoder with Dynamic Key Generation
-## ID: 1783820420.4239216
-## Created: 2026-07-12 01:40:20
+# Plan: Add generate_key() Convenience Function
+## ID: 1783825017.8973467
+## Created: 2026-07-12 02:56:57
 ## Status: in_progress
 
 ### Goal:
-Create a robust Python package for encoding/decoding text using dynamically generated keys from any data source (URLs, files). The key maps base64 characters to unique characters from the source material. Version 1.0.0 should include key persistence, file I/O, validation, proper CLI with subcommands, and comprehensive error handling.
+Add a simple, user-friendly function `generate_key()` to the xenco library that provides a one-line interface for generating keys from any source (URL, file, or text) and optionally saving them to a file. This function should wrap the existing KeyGenerator and KeyFile classes to make the library easier to use for simple use cases.
 
-### Tasks (11):
-1. [pending] Task 1: Project Structure and Setup
-   ID: 1783820423.2622924
+### Tasks (4):
+1. [pending] Add generate_key() function to keygen.py
+   ID: 1783825022.2059548
 
-2. [pending] Task 2: Core Key Generation Module
-   ID: 1783820425.7074614
+2. [pending] Export generate_key in __init__.py
+   ID: 1783825025.746377
 
-3. [pending] Task 3: Encoding/Decoding Engine
-   ID: 1783820427.8139687
+3. [pending] Create example script demonstrating generate_key()
+   ID: 1783825028.3425322
 
-4. [pending] Task 4: Key File Format and Persistence
-   ID: 1783820430.1069443
-
-5. [pending] Task 5: Command-Line Interface with Subcommands
-   ID: 1783820435.0676053
-
-6. [pending] Task 6: File I/O and Streaming Support
-   ID: 1783820440.164296
-
-7. [pending] Task 7: Validation and Error Handling
-   ID: 1783820444.6399646
-
-8. [pending] Task 8: Configuration System
-   ID: 1783820446.8890076
-
-9. [pending] Task 9: Unit Tests
-   ID: 1783820448.8625767
-
-10. [pending] Task 10: Documentation and Examples
-   ID: 1783820451.4225576
-
-11. [pending] Task 11: Integration and Entry Point
-   ID: 1783820453.889105
+4. [pending] Add unit tests for generate_key() function
+   ID: 1783825033.707402
 
 ---
 
