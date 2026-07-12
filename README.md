@@ -17,7 +17,7 @@ xEnco is a Python package for encoding and decoding text using dynamically gener
 ## Quick Start
 
 ### Installation
-
+git clone https://github.com/m5it/xenco.git
 ```bash
 # Clone the repository
 git clone https://github.com/madk0s/xenco.git

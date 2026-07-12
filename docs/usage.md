@@ -11,7 +11,7 @@
 ## Installation
 
 ### From Source
-
+git clone https://github.com/m5it/xenco.git
 ```bash
 git clone https://github.com/madk0s/xenco.git
 cd xenco
