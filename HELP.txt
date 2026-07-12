@@ -1,0 +1,19 @@
+# References:
+#     - https://stackoverflow.com/questions/48221807/google-cloud-instance-terminate-after-close-browser
+#     - https://stackoverflow.com/questions/50651416/run-python-constantly-on-the-google-cloud-platform
+#-----------------------------------
+# Using screen to keep process in bg
+#-----------------------------------
+apt install screen
+screen
+python3 xIrcCat.py
+ctrl+A ctrl+D
+exit
+
+# To restore screens after login
+#-----------------------------------
+screen -r
+
+# To view running screens
+#-----------------------------------
+screen -ls
