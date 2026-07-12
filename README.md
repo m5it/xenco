@@ -12,6 +12,7 @@ xEnco is a Python package for encoding and decoding text using dynamically gener
 - 📁 **File Support** - Process files of any size with streaming
 - 🔧 **Configurable** - Custom ASCII ranges and HTTP settings
 - 🧪 **Well Tested** - Comprehensive test suite with 80%+ coverage
+- ✨ **Simple API** - One-line key generation with `generate_key()` (v1.1.0)
 
 ## Quick Start
 
@@ -47,7 +48,7 @@ xenco decode -i encoded.txt -k mykey.xenco -o -
 ### `keygen` - Generate a New Key
 
 ```bash
-# From URL (default ASCII range 32-128)
+# From URL (default ASCII range 32-127)
 xenco keygen -s "https://www.example.com" -o mykey.xenco
 
 # From file
@@ -101,17 +102,6 @@ xenco inspect -k mykey.xenco --metadata
 
 ## Python API
 
-### Basic Encoding/Decoding
-
-```python
-from xenco.keygen import KeyGenerator
-from xenco.encoder import Encoder
-
-# Generate a key
-keygen = KeyGenerator(ascii_from=32, ascii_to=128)
-encode_map, decode_map = keygen.generate("https://www.example.com")
-
-# Create encoder
 ### Quick Key Generation (New in 1.1.0)
 
 ```python
@@ -133,7 +123,18 @@ keyfile = generate_key(
 encode_map, decode_map = generate_key("my source text")
 ```
 
-### Working with Key Files
+### Basic Encoding/Decoding
+
+```python
+from xenco.keygen import KeyGenerator
+from xenco.encoder import Encoder
+
+# Generate a key
+keygen = KeyGenerator(ascii_from=32, ascii_to=127)
+encode_map, decode_map = keygen.generate("https://www.example.com")
+
+# Create encoder
+encoder = Encoder(encode_map, decode_map)
 
 # Encode
 encoded = encoder.encode("Hello, World!")
@@ -150,7 +151,7 @@ from xenco.keyfile import KeyFile
 from xenco.keygen import KeyGenerator
 
 # Generate and save key
-keygen = KeyGenerator(32, 128)
+keygen = KeyGenerator(32, 127)
 keyfile = KeyFile.from_keygenerator(keygen, "https://example.com")
 keyfile.save("mykey.xenco")
 
@@ -169,7 +170,7 @@ config = Config()
 
 # Access settings
 print(config.ascii_from)  # 32
-print(config.ascii_to)    # 128
+print(config.ascii_to)    # 127
 
 # Modify settings
 config.ascii_from = 40
@@ -183,12 +184,12 @@ xEnco keys are stored in JSON format with metadata:
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "created": "2024-01-15T10:30:00",
   "source": "https://www.example.com",
   "ascii_range": {
     "from": 32,
-    "to": 128
+    "to": 127
   },
   "checksum": "sha256:abc123...",
   "encode_map": {
@@ -209,7 +210,7 @@ xEnco keys are stored in JSON format with metadata:
 ## How It Works
 
 1. **Key Generation**: Extracts unique characters from the source within the specified ASCII range
-2. **Mapping Creation**: Maps base64 characters (A-Z, a-z, 0-9, +/) to the source characters
+2. **Mapping Creation**: Maps base64 characters (A-Z, a-z, 0-9, +/=) to the source characters (65 total)
 3. **Encoding**: Converts text to base64, then maps each character using the key
 4. **Decoding**: Reverse mapping from encoded characters back to base64, then decodes
 
@@ -241,3 +242,7 @@ MIT License - See LICENSE file for details
 ## Author
 
 madK0s
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
