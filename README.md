@@ -107,27 +107,26 @@ xenco inspect -k mykey.xenco --metadata
 ```python
 from xenco import generate_key
 
-# Generate and save key in one line
-keyfile = generate_key("https://example.com", "mykey.xenco")
+# Generate from text and save to file (NO INTERNET REQUIRED)
+keyfile = generate_key("Your source text with many unique characters...", "mykey.xenco")
+
+# Generate from a local file
+keyfile = generate_key("/path/to/source.txt", "mykey.xenco")
 
 # Generate with custom options
 keyfile = generate_key(
-    "source.txt",
+    "source text here...",
     output_path="key.xenco",
     ascii_from=40,
     ascii_to=120,
     pretty=True
 )
 
-# Generate without saving (returns mappings)
-encode_map, decode_map = generate_key("my source text")
+# Generate without saving - returns mappings tuple
+encode_map, decode_map = generate_key("my source text...")
 ```
 
-### Basic Encoding/Decoding
-
-```python
-from xenco.keygen import KeyGenerator
-from xenco.encoder import Encoder
+**Note:** `generate_key()` works with any source - text strings, local files, or URLs. No internet required for text or file sources!
 
 # Generate a key
 keygen = KeyGenerator(ascii_from=32, ascii_to=127)

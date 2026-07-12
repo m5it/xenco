@@ -3915,3 +3915,93 @@ README.md is now properly updated with:
 
 <!-- {"role": "assistant", "content": "README.md is now properly updated with:\n\n1. **Version 1.1.0** in header\n2. **Feature bullet**: \"Simple API - One-line key generation with `generate_key()` (v1.1.0)\"\n3. **\"Quick Key Generation (New in 1.1.0)\"** section with three examples:\n   - Basic save to file\n   - Custom options (ascii_from/to, pretty)\n   - Return mappings without saving\n4. **Key file format** showing version 1.1.0\n5. **ASCII range** updated to 32-127 throughout\n6. **Changelog link** at the bottom\n\nThe README now properly showcases the new `generate_key()` function as a headline feature of v1.1.0!", "sessionId": 316, "rowId": 33, "timestamp": 1783825598.5421662, "date": "2026-07-12", "thinking": "The README.md is now complete with:\n1. Version 1.1.0 in the header\n2. Feature bullet mentioning the Simple API with `generate_key()` (v1.1.0)\n3. \"Quick Key Generation (New in 1.1.0)\" section with examples\n4. Key file format example showing version 1.1.0\n\nEverything is properly updated!", "prompt_tokens": 92993, "response_tokens": 245} -->
 
+## [03:07] USER
+but generate_key should work without accessing internet
+
+---
+
+<!-- {"role": "user", "content": "but generate_key should work without accessing internet", "sessionId": 317, "rowId": 34, "timestamp": 1783825647.62555, "date": "2026-07-12"} -->
+
+## [03:07] ASSISTANT
+You're right! Let me verify and update the examples to work offline with local text and files:
+> 
+> <Terminal>
+> <arg1>python3</arg1>
+> <arg2>-c</arg2>
+> <arg3>
+> from xenco import generate_key
+> 
+> # Test with local text (NO INTERNET REQUIRED)
+> source = "The quick brown fox jumps over the lazy dog. " * 10 + \
+>          "1234567890 !@#$%^&*() " * 5 + \
+>          "ABCDEFGHIJKLMNOPQRSTUVWXYZ " * 3
+> 
+> # This works completely offline
+> result = generate_key(source)
+> print(f"✓ Offline key generation works: {type(result).__n...
+> (truncated, 900 chars total)
+> </arg3>
+> </Terminal>
+
+---
+
+<!-- {"role": "assistant", "content": "You're right! Let me verify and update the examples to work offline with local text and files:\n\n<Terminal>\n<arg1>python3</arg1>\n<arg2>-c</arg2>\n<arg3>\nfrom xenco import generate_key\n\n# Test with local text (NO INTERNET REQUIRED)\nsource = \"The quick brown fox jumps over the lazy dog. \" * 10 + \\\n         \"1234567890 !@#$%^&*() \" * 5 + \\\n         \"ABCDEFGHIJKLMNOPQRSTUVWXYZ \" * 3\n\n# This works completely offline\nresult = generate_key(source)\nprint(f\"\u2713 Offline key generation works: {type(result).__name__}\")\nprint(f\"\u2713 Generated {len(result[0])} mappings\")\n\n# Test with output file\nimport tempfile\nfrom pathlib import Path\n\nwith tempfile.TemporaryDirectory() as tmpdir:\n    output = Path(tmpdir) / \"test.xenco\"\n    keyfile = generate_key(source, output_path=str(output))\n    print(f\"\u2713 Key saved to file: {output.exists()}\")\n    print(f\"\u2713 KeyFile source: {keyfile.source[:50]}...\")\n</arg3>\n</Terminal>", "sessionId": 317, "rowId": 34, "timestamp": 1783825652.03513, "date": "2026-07-12", "thinking": "", "prompt_tokens": 93173, "response_tokens": 352} -->
+
+## [03:07] tool: Terminal
+✓ Offline key generation works: tuple
+> ✓ Generated 65 mappings
+> ✓ Key saved to file: True
+> ✓ KeyFile source: The quick brown fox jumps over the lazy dog. The q...
+> (cwd: /home/t3ch/adata2/OurAI/playground/oldservices/X/denied)
+
+---
+
+<!-- {"role": "tool", "content": "\u2713 Offline key generation works: tuple\n\u2713 Generated 65 mappings\n\u2713 Key saved to file: True\n\u2713 KeyFile source: The quick brown fox jumps over the lazy dog. The q...\n(cwd: /home/t3ch/adata2/OurAI/playground/oldservices/X/denied)", "sessionId": 317, "rowId": 34, "timestamp": 1783825652.0587819, "date": "2026-07-12", "name": "Terminal"} -->
+
+## [03:07] ASSISTANT
+<ReplaceLine>
+> <fileName>README.md</fileName>
+> <fromLine>105</fromLine>
+> <toLine>130</toLine>
+> <replacement>### Quick Key Generation (New in 1.1.0)
+> 
+> ```python
+> from xenco import generate_key
+> 
+> # Generate from text and save to file (NO INTERNET REQUIRED)
+> keyfile = generate_key("Your source text with many unique characters...", "mykey.xenco")
+> 
+> # Generate from a local file
+> keyfile = generate_key("/path/to/source.txt", "mykey.xenco")
+> 
+> # Generate with custom options
+> keyfile = generate_key(
+>     "source text...
+> (truncated, 901 chars total)
+> </replacement>
+> </ReplaceLine>
+
+---
+
+<!-- {"role": "assistant", "content": "<ReplaceLine>\n<fileName>README.md</fileName>\n<fromLine>105</fromLine>\n<toLine>130</toLine>\n<replacement>### Quick Key Generation (New in 1.1.0)\n\n```python\nfrom xenco import generate_key\n\n# Generate from text and save to file (NO INTERNET REQUIRED)\nkeyfile = generate_key(\"Your source text with many unique characters...\", \"mykey.xenco\")\n\n# Generate from a local file\nkeyfile = generate_key(\"/path/to/source.txt\", \"mykey.xenco\")\n\n# Generate with custom options\nkeyfile = generate_key(\n    \"source text here...\",\n    output_path=\"key.xenco\",\n    ascii_from=40,\n    ascii_to=120,\n    pretty=True\n)\n\n# Generate without saving - returns mappings tuple\nencode_map, decode_map = generate_key(\"my source text...\")\n```\n\n**Note:** `generate_key()` works with any source - text strings, local files, or URLs. No internet required for text or file sources!</replacement>\n<confirmed>true</confirmed>\n</ReplaceLine>", "sessionId": 317, "rowId": 34, "timestamp": 1783825656.2535188, "date": "2026-07-12", "thinking": "", "prompt_tokens": 93509, "response_tokens": 252} -->
+
+## [03:07] tool: ReplaceLine
+Replaced lines 105-130 in 'README.md'. (26 old lines -> 25 new lines). Old content: ### Quick Key Generation (New in 1.1.0)\n\n```python\nfrom xenco import generate_key\n\n# Generate and save key in one line\nkeyfile = generate_key("https://example.com", "mykey.xenco")\n\n# Generate ...
+
+---
+
+<!-- {"role": "tool", "content": "Replaced lines 105-130 in 'README.md'. (26 old lines -> 25 new lines). Old content: ### Quick Key Generation (New in 1.1.0)\\n\\n```python\\nfrom xenco import generate_key\\n\\n# Generate and save key in one line\\nkeyfile = generate_key(\"https://example.com\", \"mykey.xenco\")\\n\\n# Generate ...", "sessionId": 317, "rowId": 34, "timestamp": 1783825656.254436, "date": "2026-07-12", "name": "ReplaceLine"} -->
+
+## [03:07] ASSISTANT
+Done! Now the README shows that `generate_key()` works **offline** with:
+> 1. **Text strings** - `"Your source text..."` 
+> 2. **Local files** - `"/path/to/source.txt"`
+> 3. **Custom options** - ascii_from/to, pretty
+> 4. **Without saving** - returns mappings tuple
+> 
+> The note clarifies: "NO INTERNET REQUIRED" for text or file sources!
+
+---
+
+<!-- {"role": "assistant", "content": "Done! Now the README shows that `generate_key()` works **offline** with:\n1. **Text strings** - `\"Your source text...\"` \n2. **Local files** - `\"/path/to/source.txt\"`\n3. **Custom options** - ascii_from/to, pretty\n4. **Without saving** - returns mappings tuple\n\nThe note clarifies: \"NO INTERNET REQUIRED\" for text or file sources!", "sessionId": 317, "rowId": 34, "timestamp": 1783825659.1666932, "date": "2026-07-12", "thinking": "Done! Now the README examples show that `generate_key()` works:\n1. From text strings (no internet)\n2. From local files (no internet)\n3. With custom options\n4. Without saving (returns mappings)\n\nThe note at the bottom clarifies that internet is only needed for URLs, not for text or files.", "prompt_tokens": 93831, "response_tokens": 154} -->
+
