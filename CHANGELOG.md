@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exclude specific files, directories, or extensions with
     `--exclude-file`, `--exclude-dir`, `--exclude-ext`
   - `decode_combined()` helper to split a combined batch file back into individual files
+- Added map hash metadata to key files
+  - `encode_map_md5`, `encode_map_crc32`, `decode_map_md5`, `decode_map_crc32`
+  - Hashes are deterministic and stored in the key JSON for quick comparison
 - New `mix` CLI command and `KeyFile.mix()` API for remixing existing keys
   - `--shift`, `--reverse`, and `--seed` options to change character mappings
   - Produces a different encoding while remaining decodeable with the mixed key

@@ -35,11 +35,11 @@ class TestKeyFile:
             decode_map=decode_map,
             source="test_source",
             ascii_from=32,
-            ascii_to=128
+            ascii_to=127
         )
-        
+
         data = keyfile.to_dict()
-        
+
         assert "version" in data
         assert "created" in data
         assert "source" in data
@@ -47,10 +47,14 @@ class TestKeyFile:
         assert "checksum" in data
         assert "encode_map" in data
         assert "decode_map" in data
-        
+        assert "encode_map_md5" in data
+        assert "encode_map_crc32" in data
+        assert "decode_map_md5" in data
+        assert "decode_map_crc32" in data
+
         assert data["source"] == "test_source"
         assert data["ascii_range"]["from"] == 32
-        assert data["ascii_range"]["to"] == 128
+        assert data["ascii_range"]["to"] == 127
     
     def test_save_and_load(self, mock_key_mappings, temp_dir):
         """Test saving and loading key file."""
@@ -181,9 +185,9 @@ class TestKeyFile:
             decode_map=decode_map,
             source="test_source",
             ascii_from=32,
-            ascii_to=128
+            ascii_to=127
         )
-        
+
         meta = keyfile.get_metadata()
         assert "version" in meta
         assert "created" in meta
@@ -192,6 +196,12 @@ class TestKeyFile:
         assert "ascii_to" in meta
         assert "mapping_count" in meta
         assert meta["mapping_count"] == 64
+        assert "encode_map_md5" in meta
+        assert "encode_map_crc32" in meta
+        assert "decode_map_md5" in meta
+        assert "decode_map_crc32" in meta
+        assert len(meta["encode_map_md5"]) == 32
+        assert len(meta["encode_map_crc32"]) == 8
     
     def test_from_keygenerator(self, sample_source_text, temp_dir):
         """Test creating KeyFile from KeyGenerator."""

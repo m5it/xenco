@@ -8,6 +8,7 @@ import json
 import hashlib
 import os
 import random
+import zlib
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -102,7 +103,38 @@ class KeyFile:
         json_str = json.dumps(data, sort_keys=True, separators=(',', ':'))
         hash_obj = hashlib.sha256(json_str.encode('utf-8'))
         return f"sha256:{hash_obj.hexdigest()}"
-    
+
+    @staticmethod
+    def _map_to_canonical_bytes(data: Dict[str, str]) -> bytes:
+        """
+        Convert a character mapping to a canonical byte representation.
+
+        Sorts by base64 character and uses JSON separators so the same
+        logical mapping always yields the same bytes regardless of dict
+        insertion order.
+        """
+        canonical = [(k, data[k]) for k in sorted(data.keys())]
+        return json.dumps(canonical, separators=(',', ':')).encode('utf-8')
+
+    def _calculate_map_hashes(self) -> dict:
+        """
+        Calculate MD5 and CRC32 hashes for encode/decode maps.
+
+        Returns:
+            Dictionary with keys:
+                encode_map_md5, encode_map_crc32,
+                decode_map_md5, decode_map_crc32
+        """
+        encode_bytes = self._map_to_canonical_bytes(self.encode_map)
+        decode_bytes = self._map_to_canonical_bytes(self.decode_map)
+
+        return {
+            "encode_map_md5": hashlib.md5(encode_bytes).hexdigest(),
+            "encode_map_crc32": format(zlib.crc32(encode_bytes) & 0xFFFFFFFF, '08x'),
+            "decode_map_md5": hashlib.md5(decode_bytes).hexdigest(),
+            "decode_map_crc32": format(zlib.crc32(decode_bytes) & 0xFFFFFFFF, '08x'),
+        }
+
     def to_dict(self) -> dict:
         """
         Convert to dictionary representation.
@@ -110,7 +142,7 @@ class KeyFile:
         Returns:
             Dictionary with all key data and metadata
         """
-        return {
+        result = {
             "version": self.version,
             "created": self.created,
             "source": self.source,
@@ -120,8 +152,10 @@ class KeyFile:
             },
             "checksum": self._calculate_checksum(),
             "encode_map": self.encode_map,
-            "decode_map": self.decode_map
+            "decode_map": self.decode_map,
         }
+        result.update(self._calculate_map_hashes())
+        return result
     
     def save(self, filepath: str, pretty: bool = False) -> None:
         """
@@ -263,7 +297,18 @@ class KeyFile:
             lines.append(f"Checksum:    {self._checksum[:20]}...")
         else:
             lines.append("Checksum:    (not calculated)")
-        
+
+        # Add map hashes
+        map_hashes = self._calculate_map_hashes()
+        lines.extend([
+            "",
+            "Map hashes:",
+            f"  encode_map_md5:   {map_hashes['encode_map_md5']}",
+            f"  encode_map_crc32: {map_hashes['encode_map_crc32']}",
+            f"  decode_map_md5:   {map_hashes['decode_map_md5']}",
+            f"  decode_map_crc32: {map_hashes['decode_map_crc32']}",
+        ])
+
         lines.extend([
             "",
             "-" * 50,
@@ -304,19 +349,21 @@ class KeyFile:
     def get_metadata(self) -> dict:
         """
         Get metadata dictionary.
-        
+
         Returns:
             Dictionary with metadata (no key data)
         """
-        return {
+        meta = {
             "version": self.version,
             "created": self.created,
             "source": self.source,
             "ascii_from": self.ascii_from,
             "ascii_to": self.ascii_to,
             "checksum": self._checksum,
-            "mapping_count": len(self.encode_map)
+            "mapping_count": len(self.encode_map),
         }
+        meta.update(self._calculate_map_hashes())
+        return meta
     
     def mix(
         self,

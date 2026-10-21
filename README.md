@@ -286,6 +286,10 @@ xEnco keys are stored in JSON format with metadata:
     "to": 127
   },
   "checksum": "sha256:abc123...",
+  "encode_map_md5": "d41d8cd98f00b204e9800998ecf8427e",
+  "encode_map_crc32": "00000000",
+  "decode_map_md5": "d41d8cd98f00b204e9800998ecf8427e",
+  "decode_map_crc32": "00000000",
   "encode_map": {
     "A": "!",
     "B": "@",
