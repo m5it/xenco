@@ -138,7 +138,45 @@ Examples:
         action="store_true",
         help="Show only metadata"
     )
-    
+
+    # mix command
+    mix_parser = subparsers.add_parser(
+        "mix",
+        help="Create a remixed key from an existing key"
+    )
+    mix_parser.add_argument(
+        "-k", "--key",
+        required=True,
+        help="Input key file to remix"
+    )
+    mix_parser.add_argument(
+        "-o", "--output",
+        required=True,
+        help="Output key file path"
+    )
+    mix_parser.add_argument(
+        "--shift",
+        type=int,
+        default=None,
+        help="Rotate source character positions by N"
+    )
+    mix_parser.add_argument(
+        "--reverse",
+        action="store_true",
+        help="Reverse source character positions"
+    )
+    mix_parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Deterministically shuffle source characters with a seed"
+    )
+    mix_parser.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print JSON output"
+    )
+
     return parser
 
 
@@ -259,6 +297,47 @@ def cmd_inspect(args) -> int:
         return 1
 
 
+def cmd_mix(args) -> int:
+    """Execute mix command."""
+    try:
+        keyfile = KeyFile.load(args.key)
+
+        # At least one mixing method must be requested
+        if args.shift is None and not args.reverse and args.seed is None:
+            print(
+                "Error: No mixing method specified. Use one of: --shift, --reverse, --seed",
+                file=sys.stderr
+            )
+            return 1
+
+        # Let KeyFile.mix validate that only one method is used
+        mixed = keyfile.mix(
+            shift=args.shift,
+            reverse=args.reverse,
+            seed=args.seed
+        )
+
+        mixed.save(args.output, pretty=args.pretty)
+
+        if not args.quiet:
+            print(f"Key remixed: {args.output}")
+            print(f"  Source: {mixed.source}")
+            print(f"  ASCII range: {mixed.ascii_from}-{mixed.ascii_to}")
+            print(f"  Mappings: {len(mixed.encode_map)}")
+
+        return 0
+
+    except KeyFileError as e:
+        print(f"Key error: {e}", file=sys.stderr)
+        return 1
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"Error remixing key: {e}", file=sys.stderr)
+        return 1
+
+
 def main(argv=None) -> int:
     """Main entry point for CLI."""
     parser = create_parser()
@@ -274,6 +353,7 @@ def main(argv=None) -> int:
         "encode": cmd_encode,
         "decode": cmd_decode,
         "inspect": cmd_inspect,
+        "mix": cmd_mix,
     }
     
     handler = commands.get(args.command)

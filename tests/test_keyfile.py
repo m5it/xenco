@@ -201,7 +201,7 @@ class TestKeyFile:
         keyfile = KeyFile.from_keygenerator(keygen, sample_source_text)
         
         assert keyfile.source == sample_source_text
-        assert len(keyfile.encode_map) == 64
+        assert len(keyfile.encode_map) == 65
         assert keyfile.ascii_from == 32
         assert keyfile.ascii_to == 128
 
@@ -235,3 +235,164 @@ class TestKeyFileErrors:
         
         with pytest.raises(KeyFileError):
             KeyFile.load(str(key_path))
+
+
+class TestKeyFileMix:
+    """Test KeyFile mix/remix functionality."""
+    
+    def test_mix_shift(self, mock_key_mappings):
+        """Test mix with shift."""
+        encode_map, decode_map = mock_key_mappings
+        keyfile = KeyFile(
+            encode_map=encode_map,
+            decode_map=decode_map,
+            source="test_source",
+            ascii_from=32,
+            ascii_to=128
+        )
+        
+        base64_chars = list(encode_map.keys())
+        original_values = [encode_map[b64] for b64 in base64_chars]
+        
+        mixed = keyfile.mix(shift=1)
+        new_values = [mixed.encode_map[b64] for b64 in base64_chars]
+        
+        assert new_values == [original_values[-1]] + original_values[:-1]
+        assert mixed.source == keyfile.source
+        assert mixed.ascii_from == keyfile.ascii_from
+        assert mixed.ascii_to == keyfile.ascii_to
+        assert len(mixed.encode_map) == len(keyfile.encode_map)
+    
+    def test_mix_reverse(self, mock_key_mappings):
+        """Test mix with reverse."""
+        encode_map, decode_map = mock_key_mappings
+        keyfile = KeyFile(
+            encode_map=encode_map,
+            decode_map=decode_map,
+            source="test_source",
+            ascii_from=32,
+            ascii_to=128
+        )
+        
+        base64_chars = list(encode_map.keys())
+        original_values = [encode_map[b64] for b64 in base64_chars]
+        
+        mixed = keyfile.mix(reverse=True)
+        new_values = [mixed.encode_map[b64] for b64 in base64_chars]
+        
+        assert new_values == list(reversed(original_values))
+    
+    def test_mix_seed_deterministic(self, mock_key_mappings):
+        """Test mix with seed is deterministic."""
+        encode_map, decode_map = mock_key_mappings
+        keyfile = KeyFile(
+            encode_map=encode_map,
+            decode_map=decode_map,
+            source="test_source",
+            ascii_from=32,
+            ascii_to=128
+        )
+        
+        mixed1 = keyfile.mix(seed=12345)
+        mixed2 = keyfile.mix(seed=12345)
+        
+        assert mixed1.encode_map == mixed2.encode_map
+        assert mixed1.encode_map != encode_map
+    
+    def test_mix_permutation(self, mock_key_mappings):
+        """Test mix with explicit permutation."""
+        encode_map, decode_map = mock_key_mappings
+        keyfile = KeyFile(
+            encode_map=encode_map,
+            decode_map=decode_map,
+            source="test_source",
+            ascii_from=32,
+            ascii_to=128
+        )
+        
+        base64_chars = list(encode_map.keys())
+        original_values = [encode_map[b64] for b64 in base64_chars]
+        permutation = list(reversed(range(len(original_values))))
+        
+        mixed = keyfile.mix(permutation=permutation)
+        new_values = [mixed.encode_map[b64] for b64 in base64_chars]
+        
+        assert new_values == list(reversed(original_values))
+    
+    def test_mix_decode_map_consistent(self, mock_key_mappings):
+        """Test mixed key has consistent decode map."""
+        encode_map, decode_map = mock_key_mappings
+        keyfile = KeyFile(
+            encode_map=encode_map,
+            decode_map=decode_map,
+            source="test_source",
+            ascii_from=32,
+            ascii_to=128
+        )
+        
+        mixed = keyfile.mix(shift=3)
+        
+        for b64_char, key_char in mixed.encode_map.items():
+            assert mixed.get_decode_map_int()[ord(key_char)] == b64_char
+    
+    def test_mix_no_method_raises(self, mock_key_mappings):
+        """Test mix with no method raises ValueError."""
+        encode_map, decode_map = mock_key_mappings
+        keyfile = KeyFile(
+            encode_map=encode_map,
+            decode_map=decode_map,
+            source="test_source",
+            ascii_from=32,
+            ascii_to=128
+        )
+        
+        with pytest.raises(ValueError):
+            keyfile.mix()
+    
+    def test_mix_multiple_methods_raises(self, mock_key_mappings):
+        """Test mix with multiple methods raises ValueError."""
+        encode_map, decode_map = mock_key_mappings
+        keyfile = KeyFile(
+            encode_map=encode_map,
+            decode_map=decode_map,
+            source="test_source",
+            ascii_from=32,
+            ascii_to=128
+        )
+        
+        with pytest.raises(ValueError):
+            keyfile.mix(shift=1, reverse=True)
+    
+    def test_mix_invalid_permutation(self, mock_key_mappings):
+        """Test mix with invalid permutation raises ValueError."""
+        encode_map, decode_map = mock_key_mappings
+        keyfile = KeyFile(
+            encode_map=encode_map,
+            decode_map=decode_map,
+            source="test_source",
+            ascii_from=32,
+            ascii_to=128
+        )
+        
+        with pytest.raises(ValueError):
+            keyfile.mix(permutation=[0, 0])  # Duplicate / invalid
+    
+    def test_mix_changes_encoding(self, temp_dir, sample_source_text):
+        """Test mixed key produces different but decodeable output."""
+        from xenco.keygen import KeyGenerator
+        from xenco.encoder import Encoder
+        
+        keygen = KeyGenerator(32, 128)
+        keyfile = KeyFile.from_keygenerator(keygen, sample_source_text)
+        
+        original = Encoder(keyfile.encode_map, keyfile.get_decode_map_int())
+        mixed = keyfile.mix(shift=5)
+        mixed_encoder = Encoder(mixed.encode_map, mixed.get_decode_map_int())
+        
+        text = "Hello, World! 12345"
+        original_encoded = original.encode(text)
+        mixed_encoded = mixed_encoder.encode(text)
+        
+        assert mixed_encoded != original_encoded
+        assert mixed_encoder.decode(mixed_encoded) == text
+        assert original.decode(original_encoded) == text

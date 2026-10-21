@@ -46,7 +46,7 @@ class TestCLIParser:
         assert args.command == "encode"
         assert args.key == "test.xenco"
         assert args.input == "input.txt"
-        assert args.output == "-"  # Default
+        assert args.output is None  # Default: stdout
     
     def test_decode_with_key(self):
         """Test decode with required args."""
@@ -118,3 +118,51 @@ class TestCLIParser:
         args = parser.parse_args(["--quiet", "encode", "-k", "test.xenco"])
         
         assert args.quiet is True
+
+    def test_mix_requires_key_and_output(self):
+        """Test mix requires --key and --output."""
+        parser = create_parser()
+        
+        with pytest.raises(SystemExit):
+            parser.parse_args(["mix", "-k", "test.xenco"])
+    
+    def test_mix_with_shift(self):
+        """Test mix with --shift."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "mix",
+            "-k", "test.xenco",
+            "-o", "mixed.xenco",
+            "--shift", "5"
+        ])
+        
+        assert args.command == "mix"
+        assert args.key == "test.xenco"
+        assert args.output == "mixed.xenco"
+        assert args.shift == 5
+        assert args.reverse is False
+        assert args.seed is None
+    
+    def test_mix_with_reverse(self):
+        """Test mix with --reverse."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "mix",
+            "-k", "test.xenco",
+            "-o", "mixed.xenco",
+            "--reverse"
+        ])
+        
+        assert args.reverse is True
+    
+    def test_mix_with_seed(self):
+        """Test mix with --seed."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "mix",
+            "-k", "test.xenco",
+            "-o", "mixed.xenco",
+            "--seed", "42"
+        ])
+        
+        assert args.seed == 42
