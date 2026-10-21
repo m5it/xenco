@@ -213,5 +213,22 @@ class TestCLIParser:
             "-k", "test.xenco",
             "--no-recursive"
         ])
-        
+
         assert args.no_recursive is True
+
+    def test_batch_exclude_options(self):
+        """Test batch exclude options."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "batch",
+            "-d", "src/",
+            "-k", "test.xenco",
+            "--exclude-file", "secrets.txt",
+            "--exclude-dir", "cache",
+            "--exclude-ext", ".log",
+            "--exclude-ext", "tmp"
+        ])
+
+        assert args.exclude_file == ["secrets.txt"]
+        assert args.exclude_dir == ["cache"]
+        assert args.exclude_ext == [".log", "tmp"]

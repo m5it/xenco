@@ -38,6 +38,42 @@ class TestFindFiles:
         with pytest.raises(BatchEncodingError):
             find_files(temp_dir / "nonexistent")
 
+    def test_find_files_exclude_files(self, temp_dir):
+        """Test excluding specific files."""
+        (temp_dir / "a.txt").write_text("hello")
+        (temp_dir / "b.txt").write_text("world")
+
+        files = find_files(temp_dir, recursive=False, exclude_files=("b.txt",))
+        assert sorted(f.name for f in files) == ["a.txt"]
+
+    def test_find_files_exclude_dirs(self, temp_dir):
+        """Test excluding directories."""
+        (temp_dir / "a.txt").write_text("hello")
+        sub = temp_dir / "sub"
+        sub.mkdir()
+        (sub / "b.txt").write_text("world")
+
+        files = find_files(temp_dir, recursive=True, exclude_dirs=("sub",))
+        assert sorted(f.name for f in files) == ["a.txt"]
+
+    def test_find_files_exclude_extensions(self, temp_dir):
+        """Test excluding extensions."""
+        (temp_dir / "a.txt").write_text("hello")
+        (temp_dir / "b.log").write_text("log")
+
+        files = find_files(temp_dir, recursive=False, exclude_extensions=(".log", "tmp"))
+        assert sorted(f.name for f in files) == ["a.txt"]
+
+    def test_find_files_exclude_relative_path(self, temp_dir):
+        """Test excluding by relative path."""
+        sub = temp_dir / "sub"
+        sub.mkdir()
+        (sub / "a.txt").write_text("hello")
+        (sub / "b.txt").write_text("world")
+
+        files = find_files(temp_dir, recursive=True, exclude_files=("sub/b.txt",))
+        assert sorted(f.name for f in files) == ["a.txt"]
+
 
 class TestBatchEncoding:
     """Test batch encoding operations."""

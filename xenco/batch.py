@@ -11,8 +11,9 @@ Modes:
 """
 
 import os
+import fnmatch
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Collection, Dict, List, Optional, Set, Tuple, Union
 
 from .encoder import Encoder
 from .keyfile import KeyFile, KeyFileError
@@ -30,10 +31,85 @@ class BatchEncodingError(Exception):
     pass
 
 
+def _compile_excludes(
+    directory: Path,
+    exclude_files: Optional[Collection[str]] = None,
+    exclude_dirs: Optional[Collection[str]] = None,
+    exclude_extensions: Optional[Collection[str]] = None,
+) -> Tuple[Set[str], Set[str], Set[str]]:
+    """
+    Normalize exclude lists to absolute paths and lowercase extension/suffix sets.
+
+    Patterns are resolved relative to ``directory``. Bare file or directory names
+    are matched anywhere in the tree.
+    """
+    exclude_files = set(exclude_files or ())
+    exclude_dirs = set(exclude_dirs or ())
+    exclude_extensions = set(exclude_extensions or ())
+
+    resolved_files: Set[str] = set()
+    for item in exclude_files:
+        path = Path(item)
+        if not path.is_absolute():
+            path = directory / path
+        resolved_files.add(str(path.resolve()))
+        # Also accept bare names anywhere in the tree
+        resolved_files.add(path.name)
+
+    resolved_dirs: Set[str] = set()
+    for item in exclude_dirs:
+        path = Path(item)
+        if not path.is_absolute():
+            path = directory / path
+        resolved_dirs.add(str(path.resolve()))
+        resolved_dirs.add(path.name)
+
+    normalized_extensions: Set[str] = set()
+    for ext in exclude_extensions:
+        ext = ext.lower()
+        if not ext.startswith("."):
+            ext = f".{ext}"
+        normalized_extensions.add(ext)
+
+    return resolved_files, resolved_dirs, normalized_extensions
+
+
+def _is_excluded(
+    filepath: Path,
+    root_dir: Path,
+    exclude_files: Set[str],
+    exclude_dirs: Set[str],
+    exclude_extensions: Set[str],
+) -> bool:
+    """Return True if a file should be skipped based on exclude rules."""
+    # File by absolute path or name
+    if str(filepath.resolve()) in exclude_files or filepath.name in exclude_files:
+        return True
+
+    # Extension check
+    if filepath.suffix.lower() in exclude_extensions:
+        return True
+
+    # Directory check: if any part of the relative path is an excluded directory
+    try:
+        rel_parts = filepath.resolve().relative_to(root_dir.resolve()).parts
+    except ValueError:
+        rel_parts = ()
+
+    for part in rel_parts[:-1]:
+        if part in exclude_dirs:
+            return True
+
+    return False
+
+
 def find_files(
     directory: Union[str, Path],
     recursive: bool = True,
-    skip_suffixes: Optional[Tuple[str, ...]] = None
+    skip_suffixes: Optional[Tuple[str, ...]] = None,
+    exclude_files: Optional[Collection[str]] = None,
+    exclude_dirs: Optional[Collection[str]] = None,
+    exclude_extensions: Optional[Collection[str]] = None,
 ) -> List[Path]:
     """
     Find all regular files in a directory that should be encoded.
@@ -43,6 +119,11 @@ def find_files(
         recursive: If True, also walk into subdirectories
         skip_suffixes: File suffixes to skip (e.g., output suffixes to avoid
                        re-encoding already encoded files)
+        exclude_files: File paths or names to skip. Relative paths are resolved
+                      from ``directory``. Bare names match anywhere in the tree.
+        exclude_dirs: Directory paths or names to skip entirely. Relative paths
+                      are resolved from ``directory``. Bare names match anywhere.
+        exclude_extensions: File extensions to skip, with or without leading dot.
 
     Returns:
         Sorted list of absolute file paths
@@ -59,15 +140,29 @@ def find_files(
 
     skip_suffixes = skip_suffixes or (".xenco",)
 
+    ex_files, ex_dirs, ex_extensions = _compile_excludes(
+        directory, exclude_files, exclude_dirs, exclude_extensions
+    )
+
     files: List[Path] = []
 
     if recursive:
-        for root, _dirs, filenames in os.walk(directory):
+        for root, dirs, filenames in os.walk(directory):
+            root_path = Path(root)
+
+            # Skip excluded directories while walking
+            dirs[:] = [
+                d for d in dirs
+                if d not in ex_dirs and str((root_path / d).resolve()) not in ex_dirs
+            ]
+
             for name in filenames:
-                filepath = Path(root) / name
+                filepath = root_path / name
                 if not filepath.is_file():
                     continue
                 if any(str(filepath).endswith(suffix) for suffix in skip_suffixes):
+                    continue
+                if _is_excluded(filepath, directory, ex_files, ex_dirs, ex_extensions):
                     continue
                 files.append(filepath)
     else:
@@ -76,6 +171,8 @@ def find_files(
             if not filepath.is_file():
                 continue
             if any(str(filepath).endswith(suffix) for suffix in skip_suffixes):
+                continue
+            if _is_excluded(filepath, directory, ex_files, ex_dirs, ex_extensions):
                 continue
             files.append(filepath)
 
@@ -122,7 +219,10 @@ def encode_batch(
     recursive: bool = True,
     overwrite: bool = False,
     suffix: str = ".xenco",
-    quiet: bool = False
+    quiet: bool = False,
+    exclude_files: Optional[Collection[str]] = None,
+    exclude_dirs: Optional[Collection[str]] = None,
+    exclude_extensions: Optional[Collection[str]] = None,
 ) -> Dict[str, Union[int, List[str], str]]:
     """
     Encode all files in a directory.
@@ -139,6 +239,9 @@ def encode_batch(
         overwrite: Whether to overwrite existing output files
         suffix: Suffix appended to each output file in mode="separate"
         quiet: If True, suppress progress output
+        exclude_files: File paths or names to skip
+        exclude_dirs: Directory paths or names to skip
+        exclude_extensions: File extensions to skip
 
     Returns:
         Dictionary with encoding results:
@@ -165,7 +268,14 @@ def encode_batch(
 
     # Find files, also skipping the key file if it happens to live inside the tree
     skip_suffixes = (suffix, ".xenco")
-    files = find_files(directory, recursive=recursive, skip_suffixes=skip_suffixes)
+    files = find_files(
+        directory,
+        recursive=recursive,
+        skip_suffixes=skip_suffixes,
+        exclude_files=exclude_files,
+        exclude_dirs=exclude_dirs,
+        exclude_extensions=exclude_extensions,
+    )
     key_path_resolved = Path(key_path).resolve()
     files = [f for f in files if f.resolve() != key_path_resolved]
 

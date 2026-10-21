@@ -226,6 +226,24 @@ Examples:
         default=".xenco",
         help="Output suffix for mode=separate (default: .xenco)"
     )
+    batch_parser.add_argument(
+        "--exclude-file",
+        action="append",
+        default=[],
+        help="File path or name to exclude (can be repeated)"
+    )
+    batch_parser.add_argument(
+        "--exclude-dir",
+        action="append",
+        default=[],
+        help="Directory path or name to exclude (can be repeated)"
+    )
+    batch_parser.add_argument(
+        "--exclude-ext",
+        action="append",
+        default=[],
+        help="File extension to exclude, with or without leading dot (can be repeated)"
+    )
 
     return parser
 
@@ -401,7 +419,10 @@ def cmd_batch(args) -> int:
             recursive=recursive,
             overwrite=args.overwrite,
             suffix=args.suffix,
-            quiet=args.quiet
+            quiet=args.quiet,
+            exclude_files=args.exclude_file,
+            exclude_dirs=args.exclude_dir,
+            exclude_extensions=args.exclude_ext,
         )
 
         if not args.quiet:

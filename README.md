@@ -104,6 +104,12 @@ xenco batch -d /path/to/dir -k mykey.xenco -o /path/to/out -m separate
 
 # Only process top-level files, ignore subdirectories
 xenco batch -d /path/to/dir -k mykey.xenco --no-recursive
+
+# Exclude specific files, directories, or extensions
+xenco batch -d /path/to/dir -k mykey.xenco \
+    --exclude-file secrets.txt \
+    --exclude-dir subdir \
+    --exclude-ext .log --exclude-ext tmp
 ```
 
 ### `encode` - Encode Text
@@ -180,6 +186,16 @@ result = encode_batch("/path/to/dir", "mykey.xenco", mode="separate")
 
 # Encode everything into one combined file
 encode_batch("/path/to/dir", "mykey.xenco", output="combined.xenco", mode="one")
+
+# Exclude files, directories, or extensions
+result = encode_batch(
+    "/path/to/dir",
+    "mykey.xenco",
+    mode="separate",
+    exclude_files=("secrets.txt", "notes.md"),
+    exclude_dirs=("cache",),
+    exclude_extensions=(".log", "tmp"),
+)
 
 # Decode a combined batch file back into (path, content) tuples
 files = decode_combined(open("combined.xenco").read(), "mykey.xenco")

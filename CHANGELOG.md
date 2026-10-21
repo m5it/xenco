@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `mode="one"`: produces a single combined output with length-prefixed file headers
   - Recursive directory scanning with `--no-recursive` option
   - Skips already-encoded `.xenco` files and the key file itself
+  - Exclude specific files, directories, or extensions with
+    `--exclude-file`, `--exclude-dir`, `--exclude-ext`
   - `decode_combined()` helper to split a combined batch file back into individual files
 - New `mix` CLI command and `KeyFile.mix()` API for remixing existing keys
   - `--shift`, `--reverse`, and `--seed` options to change character mappings
