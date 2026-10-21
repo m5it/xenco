@@ -197,13 +197,13 @@ class TestKeyFile:
         """Test creating KeyFile from KeyGenerator."""
         from xenco.keygen import KeyGenerator
         
-        keygen = KeyGenerator(32, 128)
+        keygen = KeyGenerator(32, 127)
         keyfile = KeyFile.from_keygenerator(keygen, sample_source_text)
         
         assert keyfile.source == sample_source_text
         assert len(keyfile.encode_map) == 65
         assert keyfile.ascii_from == 32
-        assert keyfile.ascii_to == 128
+        assert keyfile.ascii_to == 127
 
 
 class TestKeyFileErrors:
@@ -382,7 +382,7 @@ class TestKeyFileMix:
         from xenco.keygen import KeyGenerator
         from xenco.encoder import Encoder
         
-        keygen = KeyGenerator(32, 128)
+        keygen = KeyGenerator(32, 127)
         keyfile = KeyFile.from_keygenerator(keygen, sample_source_text)
         
         original = Encoder(keyfile.encode_map, keyfile.get_decode_map_int())

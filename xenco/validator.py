@@ -212,9 +212,11 @@ class Validator:
         if os.path.exists(source):
             if os.path.isfile(source):
                 return 'file'
+            elif os.path.isdir(source):
+                return 'directory'
             else:
                 raise SourceError(
-                    f"Source path exists but is not a file: {source}",
+                    f"Source path exists but is not a file or directory: {source}",
                     field="source"
                 )
         

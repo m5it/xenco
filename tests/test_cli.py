@@ -166,3 +166,52 @@ class TestCLIParser:
         ])
         
         assert args.seed == 42
+    
+    def test_batch_requires_directory_and_key(self):
+        """Test batch requires --directory and --key."""
+        parser = create_parser()
+        
+        with pytest.raises(SystemExit):
+            parser.parse_args(["batch", "-k", "test.xenco"])
+    
+    def test_batch_default_mode(self):
+        """Test batch default mode is separate."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "batch",
+            "-d", "src/",
+            "-k", "test.xenco"
+        ])
+        
+        assert args.command == "batch"
+        assert args.directory == "src/"
+        assert args.key == "test.xenco"
+        assert args.mode == "separate"
+        assert args.recursive is True
+        assert args.no_recursive is False
+    
+    def test_batch_one_mode(self):
+        """Test batch with mode=one."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "batch",
+            "-d", "src/",
+            "-k", "test.xenco",
+            "-o", "combined.xenco",
+            "-m", "one"
+        ])
+        
+        assert args.mode == "one"
+        assert args.output == "combined.xenco"
+    
+    def test_batch_no_recursive(self):
+        """Test batch --no-recursive."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "batch",
+            "-d", "src/",
+            "-k", "test.xenco",
+            "--no-recursive"
+        ])
+        
+        assert args.no_recursive is True

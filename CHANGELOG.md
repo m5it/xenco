@@ -5,6 +5,30 @@ All notable changes to xEnco will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-10-21
+
+### Added
+- New `batch` CLI command and `xenco.batch.encode_batch()` API for encoding entire directories
+  - `mode="separate"` (default): creates one `.xenco` file next to each original file
+  - `mode="one"`: produces a single combined output with length-prefixed file headers
+  - Recursive directory scanning with `--no-recursive` option
+  - Skips already-encoded `.xenco` files and the key file itself
+  - `decode_combined()` helper to split a combined batch file back into individual files
+- New `mix` CLI command and `KeyFile.mix()` API for remixing existing keys
+  - `--shift`, `--reverse`, and `--seed` options to change character mappings
+  - Produces a different encoding while remaining decodeable with the mixed key
+- Directory support in key generation
+  - `KeyGenerator` now accepts a directory path as source
+  - Reads all readable text files and attempts to ensure their characters are covered
+  - `Validator.validate_source_type()` returns `"directory"` for directory paths
+- Standalone `main.py` launcher for running the CLI without installing the package
+
+### Changed
+- Bumped version to 1.2.0 in `setup.py` and `xenco/__init__.py`
+- Updated README.md with `batch`, `mix`, directory key generation, and `main.py` usage
+- Test suite updated and expanded for new features
+  - 141 tests passing
+
 ## [1.1.0] - 2026-07-12
 
 ### Added

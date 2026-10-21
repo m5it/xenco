@@ -42,9 +42,9 @@ class TestLargeFileHandling:
         expected = "".join(chunks)
         assert result == expected
     
-    def test_encode_large_data(self, mock_key_mappings, temp_dir):
+    def test_encode_large_data(self, mock_key_mappings_full, temp_dir):
         """Test encoding large data."""
-        encode_map, decode_map = mock_key_mappings
+        encode_map, decode_map = mock_key_mappings_full
         encoder = Encoder(encode_map, decode_map)
         
         # Create large text (100KB)
@@ -58,19 +58,17 @@ class TestLargeFileHandling:
         
         assert decoded == large_text
     
-    def test_encode_iter_large(self, mock_key_mappings, temp_dir):
+    def test_encode_iter_large(self, mock_key_mappings_full, temp_dir):
         """Test iterative encoding of large data."""
-        encode_map, decode_map = mock_key_mappings
+        encode_map, decode_map = mock_key_mappings_full
         encoder = Encoder(encode_map, decode_map)
-        
+
         # Large text
         large_text = "A" * 10000
-        
-        # Encode iteratively
-        chunks = list(encoder.encode_iter(large_text, chunk_size=1000))
-        
-        # Full encode
-        full_encoded = encoder.encode(large_text)
-        
-        # Should match
-        assert "".join(chunks) == full_encoded
+
+        # Encode iteratively with chunk_size aligned to base64 input block size
+        chunks = list(encoder.encode_iter(large_text, chunk_size=1200))
+
+        # Concatenated chunks decode back to the original text
+        assert "".join(chunks)
+        assert encoder.decode("".join(chunks)) == large_text

@@ -14,6 +14,7 @@ from .encoder import Encoder
 from .keyfile import KeyFile, KeyFileError
 from .config import Config
 from .utils import read_text_file, write_text_file
+from .batch import encode_batch, BatchEncodingError
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -177,6 +178,55 @@ Examples:
         help="Pretty-print JSON output"
     )
 
+    # batch command
+    batch_parser = subparsers.add_parser(
+        "batch",
+        help="Encode all files in a directory"
+    )
+    batch_parser.add_argument(
+        "-d", "--directory",
+        required=True,
+        help="Directory containing files to encode"
+    )
+    batch_parser.add_argument(
+        "-k", "--key",
+        required=True,
+        help="Key file to use"
+    )
+    batch_parser.add_argument(
+        "-o", "--output",
+        default=None,
+        help="Output file for mode=one, output directory for mode=separate (default: same as source)"
+    )
+    batch_parser.add_argument(
+        "-m", "--mode",
+        choices=["one", "separate"],
+        default="separate",
+        help="Batch mode: one combined output or separate files (default: separate)"
+    )
+    batch_parser.add_argument(
+        "--recursive",
+        action="store_true",
+        default=True,
+        help="Walk into subdirectories (default: True)"
+    )
+    batch_parser.add_argument(
+        "--no-recursive",
+        action="store_true",
+        default=False,
+        help="Do not walk into subdirectories"
+    )
+    batch_parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing output files"
+    )
+    batch_parser.add_argument(
+        "--suffix",
+        default=".xenco",
+        help="Output suffix for mode=separate (default: .xenco)"
+    )
+
     return parser
 
 
@@ -338,6 +388,40 @@ def cmd_mix(args) -> int:
         return 1
 
 
+def cmd_batch(args) -> int:
+    """Execute batch encode command."""
+    try:
+        recursive = args.recursive and not args.no_recursive
+
+        result = encode_batch(
+            directory=args.directory,
+            key_path=args.key,
+            output=args.output,
+            mode=args.mode,
+            recursive=recursive,
+            overwrite=args.overwrite,
+            suffix=args.suffix,
+            quiet=args.quiet
+        )
+
+        if not args.quiet:
+            print("Files encoded:")
+            for path in result["files"]:
+                print(f"  {path}")
+
+        return 0
+
+    except KeyFileError as e:
+        print(f"Key error: {e}", file=sys.stderr)
+        return 1
+    except BatchEncodingError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"Error batch encoding: {e}", file=sys.stderr)
+        return 1
+
+
 def main(argv=None) -> int:
     """Main entry point for CLI."""
     parser = create_parser()
@@ -354,6 +438,7 @@ def main(argv=None) -> int:
         "decode": cmd_decode,
         "inspect": cmd_inspect,
         "mix": cmd_mix,
+        "batch": cmd_batch,
     }
     
     handler = commands.get(args.command)

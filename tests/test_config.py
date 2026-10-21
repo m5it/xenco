@@ -17,7 +17,7 @@ class TestConfig:
         
         assert config_path.exists()
         assert config.get("ascii_range.from") == 32
-        assert config.get("ascii_range.to") == 128
+        assert config.get("ascii_range.to") == 127
     
     def test_load_existing(self, temp_dir):
         """Test loading existing config."""
