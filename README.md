@@ -110,6 +110,9 @@ xenco batch -d /path/to/dir -k mykey.xenco \
     --exclude-file secrets.txt \
     --exclude-dir subdir \
     --exclude-ext .log --exclude-ext tmp
+
+# Dry run: list files that would be encoded without writing anything
+xenco batch -d /path/to/dir -k mykey.xenco -m separate -N
 ```
 
 ### `encode` - Encode Text
@@ -120,6 +123,9 @@ echo "Hello, World!" | xenco encode -k mykey.xenco
 
 # Encode from file
 xenco encode -i message.txt -k mykey.xenco -o encoded.txt
+
+# Dry run: print encoded data to stdout, do not write the output file
+xenco encode -i message.txt -k mykey.xenco -o encoded.txt -N
 
 # Encode with verbose output
 xenco encode -i message.txt -k mykey.xenco -o encoded.txt -v

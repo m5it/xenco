@@ -104,7 +104,12 @@ Examples:
         "-o", "--output",
         help="Output file (default: stdout)"
     )
-    
+    encode_parser.add_argument(
+        "-N", "--dry-run",
+        action="store_true",
+        help="Print encoded data to stdout but do not write any output file"
+    )
+
     # decode command
     decode_parser = subparsers.add_parser(
         "decode",
@@ -244,6 +249,11 @@ Examples:
         default=[],
         help="File extension to exclude, with or without leading dot (can be repeated)"
     )
+    batch_parser.add_argument(
+        "-N", "--dry-run",
+        action="store_true",
+        help="List files that would be encoded and print what would be created, without writing anything"
+    )
 
     return parser
 
@@ -287,7 +297,12 @@ def cmd_encode(args) -> int:
         
         # Encode
         encoded = encoder.encode(text)
-        
+
+        # Dry run prints encoded data without writing any file
+        if args.dry_run:
+            print(encoded, end='')
+            return 0
+
         # Write output
         if args.output:
             write_text_file(args.output, encoded)
@@ -295,7 +310,7 @@ def cmd_encode(args) -> int:
                 print(f"Encoded to: {args.output}")
         else:
             print(encoded, end='')
-        
+
         return 0
         
     except KeyFileError as e:
@@ -423,9 +438,10 @@ def cmd_batch(args) -> int:
             exclude_files=args.exclude_file,
             exclude_dirs=args.exclude_dir,
             exclude_extensions=args.exclude_ext,
+            dry_run=args.dry_run,
         )
 
-        if not args.quiet:
+        if not args.quiet and not result.get("dry_run"):
             print("Files encoded:")
             for path in result["files"]:
                 print(f"  {path}")

@@ -178,6 +178,35 @@ class TestBatchEncoding:
         assert result["count"] == 1
         assert result["files"] == ["a.txt"]
 
+    def test_encode_batch_dry_run_separate(self, tmp_path):
+        """Test dry-run does not create separate output files."""
+        key_path = self._make_keyfile(tmp_path)
+        source_dir = tmp_path / "src"
+        source_dir.mkdir()
+        (source_dir / "a.txt").write_text("Hello")
+
+        result = encode_batch(source_dir, key_path, mode="separate", dry_run=True, quiet=True)
+
+        assert result["dry_run"] is True
+        assert result["count"] == 1
+        assert not (source_dir / "a.txt.xenco").exists()
+        assert result["bytes_written"] == 0
+
+    def test_encode_batch_dry_run_one(self, tmp_path):
+        """Test dry-run does not create combined output file."""
+        key_path = self._make_keyfile(tmp_path)
+        source_dir = tmp_path / "src"
+        source_dir.mkdir()
+        (source_dir / "a.txt").write_text("Hello")
+
+        out_file = tmp_path / "combined.xenco"
+        result = encode_batch(source_dir, key_path, output=str(out_file), mode="one", dry_run=True, quiet=True)
+
+        assert result["dry_run"] is True
+        assert result["count"] == 1
+        assert not out_file.exists()
+        assert result["bytes_written"] == 0
+
 
 class TestDecodeCombined:
     """Test decoding combined batch output."""

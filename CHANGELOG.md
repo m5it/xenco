@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added map hash metadata to key files
   - `encode_map_md5`, `encode_map_crc32`, `decode_map_md5`, `decode_map_crc32`
   - Hashes are deterministic and stored in the key JSON for quick comparison
+- Added `--dry-run` / `-N` to encode and batch commands
+  - `encode -N` prints encoded output to stdout without writing any file
+  - `batch -N` lists files that would be encoded and skips all writes
 - New `mix` CLI command and `KeyFile.mix()` API for remixing existing keys
   - `--shift`, `--reverse`, and `--seed` options to change character mappings
   - Produces a different encoding while remaining decodeable with the mixed key

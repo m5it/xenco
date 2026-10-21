@@ -223,6 +223,7 @@ def encode_batch(
     exclude_files: Optional[Collection[str]] = None,
     exclude_dirs: Optional[Collection[str]] = None,
     exclude_extensions: Optional[Collection[str]] = None,
+    dry_run: bool = False,
 ) -> Dict[str, Union[int, List[str], str]]:
     """
     Encode all files in a directory.
@@ -242,6 +243,7 @@ def encode_batch(
         exclude_files: File paths or names to skip
         exclude_dirs: Directory paths or names to skip
         exclude_extensions: File extensions to skip
+        dry_run: If True, only report what would be done; no files are written
 
     Returns:
         Dictionary with encoding results:
@@ -251,7 +253,8 @@ def encode_batch(
                 "output": str,
                 "files": list of relative paths encoded,
                 "count": number of files encoded,
-                "bytes_written": total bytes written
+                "bytes_written": total bytes written,
+                "dry_run": True or False
             }
 
     Raises:
@@ -282,6 +285,33 @@ def encode_batch(
     if not files:
         raise BatchEncodingError("No encodable files found in directory")
 
+    if dry_run:
+        # Report what would be created without writing anything
+        if mode == "one":
+            output_path = Path(output) if output else Path(directory) / f"combined{suffix}"
+            output_desc = str(output_path)
+        else:
+            output_dir = Path(output) if output else directory
+            output_desc = str(output_dir)
+
+        if not quiet:
+            print(f"DRY RUN: would encode {len(files)} file(s)")
+            print(f"  Mode: {mode}")
+            print(f"  Output: {output_desc}")
+            print("  Files:")
+            for f in files:
+                print(f"    {f.relative_to(directory).as_posix()}")
+
+        return {
+            "mode": mode,
+            "directory": str(directory),
+            "output": output_desc,
+            "files": [f.relative_to(directory).as_posix() for f in files],
+            "count": len(files),
+            "bytes_written": 0,
+            "dry_run": True,
+        }
+
     if mode == "one":
         if output is None:
             raise BatchEncodingError("Output path is required for mode='one'")
@@ -303,6 +333,7 @@ def encode_batch(
             "files": [f.relative_to(directory).as_posix() for f in files],
             "count": len(files),
             "bytes_written": len(encoded.encode("utf-8")),
+            "dry_run": False,
         }
 
     elif mode == "separate":
@@ -346,6 +377,7 @@ def encode_batch(
             "files": [f.relative_to(directory).as_posix() for f in files],
             "count": len(files),
             "bytes_written": total_bytes,
+            "dry_run": False,
         }
 
     else:

@@ -232,3 +232,19 @@ class TestCLIParser:
         assert args.exclude_file == ["secrets.txt"]
         assert args.exclude_dir == ["cache"]
         assert args.exclude_ext == [".log", "tmp"]
+
+    def test_encode_dry_run_flag(self):
+        """Test encode --dry-run flag parsing."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "encode", "-k", "test.xenco", "-i", "input.txt", "--dry-run"
+        ])
+        assert args.dry_run is True
+
+    def test_batch_dry_run_flag(self):
+        """Test batch --dry-run flag parsing."""
+        parser = create_parser()
+        args = parser.parse_args([
+            "batch", "-d", "src/", "-k", "test.xenco", "-N"
+        ])
+        assert args.dry_run is True
