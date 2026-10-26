@@ -90,7 +90,7 @@ xenco mix -k mykey.xenco -o mixed.xenco --reverse
 xenco mix -k mykey.xenco -o mixed.xenco --seed 12345
 ```
 
-### `batch` - Encode Multiple Files in a Directory
+### `batch` - Encode or Decode Multiple Files in a Directory
 
 ```bash
 # Encode each file separately (creates file.txt.xenco next to every file)
@@ -113,6 +113,12 @@ xenco batch -d /path/to/dir -k mykey.xenco \
 
 # Dry run: list files that would be encoded without writing anything
 xenco batch -d /path/to/dir -k mykey.xenco -m separate -N
+
+# Decode a combined file back into a directory
+xenco batch --decode -d /path/to/out -k mykey.xenco -i combined.xenco -m one
+
+# Decode separate .xenco files back into their original names
+xenco batch --decode -d /path/to/out -k mykey.xenco -i /path/to/encoded -m separate
 ```
 
 ### `encode` - Encode Text
@@ -185,7 +191,7 @@ encode_map, decode_map = generate_key("my source text...")
 ### Batch Encoding API
 
 ```python
-from xenco.batch import encode_batch, decode_combined
+from xenco.batch import encode_batch, decode_batch, decode_combined
 
 # Encode all files in a directory separately
 result = encode_batch("/path/to/dir", "mykey.xenco", mode="separate")
@@ -207,6 +213,12 @@ result = encode_batch(
 files = decode_combined(open("combined.xenco").read(), "mykey.xenco")
 for relative_path, content in files:
     print(relative_path, content)
+
+# Decode a combined batch file back into a directory
+decode_batch("/path/to/out", "mykey.xenco", input_path="combined.xenco", mode="one")
+
+# Decode separate .xenco files back into a directory
+decode_batch("/path/to/out", "mykey.xenco", input_path="/path/to/encoded", mode="separate")
 ```
 
 ### Remixing a Key

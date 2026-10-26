@@ -14,7 +14,7 @@ from .encoder import Encoder
 from .keyfile import KeyFile, KeyFileError
 from .config import Config
 from .utils import read_text_file, write_text_file
-from .batch import encode_batch, BatchEncodingError
+from .batch import encode_batch, decode_batch, BatchEncodingError
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -186,12 +186,17 @@ Examples:
     # batch command
     batch_parser = subparsers.add_parser(
         "batch",
-        help="Encode all files in a directory"
+        help="Encode or decode all files in a directory"
+    )
+    batch_parser.add_argument(
+        "--decode",
+        action="store_true",
+        help="Decode instead of encode"
     )
     batch_parser.add_argument(
         "-d", "--directory",
         required=True,
-        help="Directory containing files to encode"
+        help="Directory containing files to encode/decode, or output directory when decoding"
     )
     batch_parser.add_argument(
         "-k", "--key",
@@ -199,9 +204,14 @@ Examples:
         help="Key file to use"
     )
     batch_parser.add_argument(
+        "-i", "--input",
+        default=None,
+        help="Input file for decode mode=one, or source directory for decode mode=separate"
+    )
+    batch_parser.add_argument(
         "-o", "--output",
         default=None,
-        help="Output file for mode=one, output directory for mode=separate (default: same as source)"
+        help="Output file for encode mode=one, output directory for encode/decode mode=separate (default: same as source)"
     )
     batch_parser.add_argument(
         "-m", "--mode",
@@ -252,7 +262,7 @@ Examples:
     batch_parser.add_argument(
         "-N", "--dry-run",
         action="store_true",
-        help="List files that would be encoded and print what would be created, without writing anything"
+        help="List files that would be encoded/decoded and print what would be created, without writing anything"
     )
 
     return parser
@@ -422,27 +432,46 @@ def cmd_mix(args) -> int:
 
 
 def cmd_batch(args) -> int:
-    """Execute batch encode command."""
+    """Execute batch encode or decode command."""
     try:
         recursive = args.recursive and not args.no_recursive
 
-        result = encode_batch(
-            directory=args.directory,
-            key_path=args.key,
-            output=args.output,
-            mode=args.mode,
-            recursive=recursive,
-            overwrite=args.overwrite,
-            suffix=args.suffix,
-            quiet=args.quiet,
-            exclude_files=args.exclude_file,
-            exclude_dirs=args.exclude_dir,
-            exclude_extensions=args.exclude_ext,
-            dry_run=args.dry_run,
-        )
+        if args.decode:
+            result = decode_batch(
+                directory=args.directory,
+                key_path=args.key,
+                input_path=args.input,
+                output=args.output,
+                mode=args.mode,
+                recursive=recursive,
+                overwrite=args.overwrite,
+                suffix=args.suffix,
+                quiet=args.quiet,
+                exclude_files=args.exclude_file,
+                exclude_dirs=args.exclude_dir,
+                exclude_extensions=args.exclude_ext,
+                dry_run=args.dry_run,
+            )
+            action = "decoded"
+        else:
+            result = encode_batch(
+                directory=args.directory,
+                key_path=args.key,
+                output=args.output,
+                mode=args.mode,
+                recursive=recursive,
+                overwrite=args.overwrite,
+                suffix=args.suffix,
+                quiet=args.quiet,
+                exclude_files=args.exclude_file,
+                exclude_dirs=args.exclude_dir,
+                exclude_extensions=args.exclude_ext,
+                dry_run=args.dry_run,
+            )
+            action = "encoded"
 
         if not args.quiet and not result.get("dry_run"):
-            print("Files encoded:")
+            print(f"Files {action}:")
             for path in result["files"]:
                 print(f"  {path}")
 
@@ -455,7 +484,8 @@ def cmd_batch(args) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
     except Exception as e:
-        print(f"Error batch encoding: {e}", file=sys.stderr)
+        action = "batch decoding" if getattr(args, "decode", False) else "batch encoding"
+        print(f"Error {action}: {e}", file=sys.stderr)
         return 1
 
 

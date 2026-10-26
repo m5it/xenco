@@ -1,17 +1,22 @@
 """
-xEnco Batch Encoding
+xEnco Batch Encoding/Decoding
 
-Encode multiple files from a directory in one operation.
+Encode or decode multiple files from a directory in one operation.
 
-Modes:
+Encoding modes:
     one       - Encode all files into a single output file with headers
                 so each file can be recovered later.
     separate  - Encode each file individually, creating a matching
                 ``.xenco`` file next to the original.
+
+Decoding modes:
+    one       - Decode a single combined file back into the original
+                directory structure.
+    separate  - Decode all ``.xenco`` files in a directory back to their
+                original names.
 """
 
 import os
-import fnmatch
 from pathlib import Path
 from typing import Collection, Dict, List, Optional, Set, Tuple, Union
 
@@ -107,18 +112,22 @@ def find_files(
     directory: Union[str, Path],
     recursive: bool = True,
     skip_suffixes: Optional[Tuple[str, ...]] = None,
+    match_suffixes: Optional[Tuple[str, ...]] = None,
     exclude_files: Optional[Collection[str]] = None,
     exclude_dirs: Optional[Collection[str]] = None,
     exclude_extensions: Optional[Collection[str]] = None,
 ) -> List[Path]:
     """
-    Find all regular files in a directory that should be encoded.
+    Find all regular files in a directory.
 
     Args:
         directory: Root directory to scan
         recursive: If True, also walk into subdirectories
         skip_suffixes: File suffixes to skip (e.g., output suffixes to avoid
                        re-encoding already encoded files)
+        match_suffixes: If provided, only return files that end with one of
+                        these suffixes. Useful for finding ``.xenco`` files to
+                        decode.
         exclude_files: File paths or names to skip. Relative paths are resolved
                       from ``directory``. Bare names match anywhere in the tree.
         exclude_dirs: Directory paths or names to skip entirely. Relative paths
@@ -138,13 +147,28 @@ def find_files(
     if not directory.is_dir():
         raise BatchEncodingError(f"Not a directory: {directory}")
 
-    skip_suffixes = skip_suffixes or (".xenco",)
+    skip_suffixes = skip_suffixes or ()
+    match_suffixes = match_suffixes or ()
+    # Keep the historical default: skip .xenco when neither skip nor match is provided
+    if not skip_suffixes and not match_suffixes:
+        skip_suffixes = (".xenco",)
 
     ex_files, ex_dirs, ex_extensions = _compile_excludes(
         directory, exclude_files, exclude_dirs, exclude_extensions
     )
 
     files: List[Path] = []
+
+    def _include(filepath: Path) -> bool:
+        if not filepath.is_file():
+            return False
+        if any(str(filepath).endswith(suffix) for suffix in skip_suffixes):
+            return False
+        if match_suffixes and not any(str(filepath).endswith(suffix) for suffix in match_suffixes):
+            return False
+        if _is_excluded(filepath, directory, ex_files, ex_dirs, ex_extensions):
+            return False
+        return True
 
     if recursive:
         for root, dirs, filenames in os.walk(directory):
@@ -158,23 +182,13 @@ def find_files(
 
             for name in filenames:
                 filepath = root_path / name
-                if not filepath.is_file():
-                    continue
-                if any(str(filepath).endswith(suffix) for suffix in skip_suffixes):
-                    continue
-                if _is_excluded(filepath, directory, ex_files, ex_dirs, ex_extensions):
-                    continue
-                files.append(filepath)
+                if _include(filepath):
+                    files.append(filepath)
     else:
         for entry in sorted(os.listdir(directory)):
             filepath = directory / entry
-            if not filepath.is_file():
-                continue
-            if any(str(filepath).endswith(suffix) for suffix in skip_suffixes):
-                continue
-            if _is_excluded(filepath, directory, ex_files, ex_dirs, ex_extensions):
-                continue
-            files.append(filepath)
+            if _include(filepath):
+                files.append(filepath)
 
     return sorted(files)
 
@@ -439,3 +453,222 @@ def decode_combined(
         offset = content_end
 
     return results
+
+
+def decode_batch(
+    directory: Union[str, Path],
+    key_path: Union[str, Path],
+    input_path: Optional[Union[str, Path]] = None,
+    output: Optional[Union[str, Path]] = None,
+    mode: str = "separate",
+    recursive: bool = True,
+    overwrite: bool = False,
+    suffix: str = ".xenco",
+    quiet: bool = False,
+    exclude_files: Optional[Collection[str]] = None,
+    exclude_dirs: Optional[Collection[str]] = None,
+    exclude_extensions: Optional[Collection[str]] = None,
+    dry_run: bool = False,
+) -> Dict[str, Union[int, List[str], str]]:
+    """
+    Decode all encoded files in a directory or a single combined file.
+
+    Args:
+        directory: Directory where decoded files should be written. For
+                   ``mode="separate"`` this is also scanned for ``.xenco``
+                   files when ``input_path`` is not given and ``output`` is not
+                   set.
+        key_path: Path to key file to use
+        input_path: For ``mode="one"``, the combined encoded file. For
+                    ``mode="separate"``, an alternate source directory of
+                    ``.xenco`` files.
+        output: Alias for ``directory`` (used by the CLI); if provided, it
+                overrides ``directory`` as the destination directory.
+        mode: ``"one"`` to decode a single combined file, ``"separate"`` to
+              decode each ``.xenco`` file individually
+        recursive: Whether to walk into subdirectories in separate mode
+        overwrite: Whether to overwrite existing decoded files
+        suffix: Suffix that identifies encoded files in separate mode
+        quiet: If True, suppress progress output
+        exclude_files: File paths or names to skip when scanning for encoded files
+        exclude_dirs: Directory paths or names to skip when scanning
+        exclude_extensions: File extensions to skip when scanning
+        dry_run: If True, only report what would be done; no files are written
+
+    Returns:
+        Dictionary with decoding results:
+            {
+                "mode": "one" or "separate",
+                "directory": str,
+                "input": str,
+                "output": str,
+                "files": list of relative paths decoded,
+                "count": number of files decoded,
+                "bytes_written": total bytes written,
+                "dry_run": True or False
+            }
+
+    Raises:
+        BatchEncodingError: If decoding fails
+        KeyFileError: If the key file cannot be loaded
+    """
+    directory = Path(directory).resolve()
+    if output:
+        directory = Path(output).resolve()
+    directory.mkdir(parents=True, exist_ok=True)
+
+    if not directory.is_dir():
+        raise BatchEncodingError(f"Not a directory: {directory}")
+
+    # Load key and create encoder
+    keyfile = KeyFile.load(str(key_path))
+    encoder = Encoder(keyfile.encode_map, keyfile.get_decode_map_int())
+
+    if mode == "one":
+        source_file = Path(input_path) if input_path else None
+        if source_file is None:
+            raise BatchEncodingError("Input path is required for mode='one'")
+        if not source_file.is_file():
+            raise BatchEncodingError(f"Input file not found: {source_file}")
+
+        encoded_text = source_file.read_text(encoding="utf-8")
+        decoded_files = decode_combined(encoded_text, str(key_path))
+
+        if dry_run:
+            if not quiet:
+                print(f"DRY RUN: would decode {len(decoded_files)} file(s)")
+                print(f"  Mode: one")
+                print(f"  Input: {source_file}")
+                print(f"  Output directory: {directory}")
+                print("  Files:")
+                for relative_path, _ in decoded_files:
+                    print(f"    {relative_path}")
+            return {
+                "mode": "one",
+                "directory": str(directory),
+                "input": str(source_file),
+                "output": str(directory),
+                "files": [relative_path for relative_path, _ in decoded_files],
+                "count": len(decoded_files),
+                "bytes_written": 0,
+                "dry_run": True,
+            }
+
+        total_bytes = 0
+        decoded_paths: List[str] = []
+
+        for relative_path, content in decoded_files:
+            relative_path = relative_path.lstrip("/")
+            out_path = directory / relative_path
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+
+            if out_path.exists() and not overwrite:
+                raise BatchEncodingError(f"Output file already exists: {out_path}")
+
+            out_path.write_bytes(content)
+            decoded_paths.append(relative_path)
+            total_bytes += len(content)
+
+        result = {
+            "mode": "one",
+            "directory": str(directory),
+            "input": str(source_file),
+            "output": str(directory),
+            "files": decoded_paths,
+            "count": len(decoded_paths),
+            "bytes_written": total_bytes,
+            "dry_run": False,
+        }
+
+    elif mode == "separate":
+        source_dir = Path(input_path).resolve() if input_path else directory
+        if source_dir.resolve() == directory.resolve() and output:
+            raise BatchEncodingError(
+                "Source and output directory are the same. "
+                "Use a different input directory or omit --output."
+            )
+        if not source_dir.is_dir():
+            raise BatchEncodingError(f"Source directory not found: {source_dir}")
+
+        files = find_files(
+            source_dir,
+            recursive=recursive,
+            match_suffixes=(suffix,),
+            exclude_files=exclude_files,
+            exclude_dirs=exclude_dirs,
+            exclude_extensions=exclude_extensions,
+        )
+        key_path_resolved = Path(key_path).resolve()
+        files = [f for f in files if f.resolve() != key_path_resolved]
+
+        if not files:
+            raise BatchEncodingError(f"No decodable files found in {source_dir}")
+
+        if dry_run:
+            if not quiet:
+                print(f"DRY RUN: would decode {len(files)} file(s)")
+                print(f"  Mode: separate")
+                print(f"  Source: {source_dir}")
+                print(f"  Output directory: {directory}")
+                print("  Files:")
+                for f in files:
+                    print(f"    {f.relative_to(source_dir).as_posix()}")
+            return {
+                "mode": "separate",
+                "directory": str(directory),
+                "input": str(source_dir),
+                "output": str(directory),
+                "files": [f.relative_to(source_dir).as_posix() for f in files],
+                "count": len(files),
+                "bytes_written": 0,
+                "dry_run": True,
+            }
+
+        total_bytes = 0
+        decoded_paths: List[str] = []
+
+        for filepath in files:
+            try:
+                encoded_text = filepath.read_text(encoding="utf-8")
+            except Exception as e:
+                raise BatchEncodingError(f"Failed to read {filepath}: {e}")
+
+            try:
+                content = encoder.decode(encoded_text, return_bytes=True)
+            except Exception as e:
+                raise BatchEncodingError(f"Failed to decode {filepath}: {e}")
+
+            relative = filepath.relative_to(source_dir)
+            out_path = directory / relative
+            if str(out_path).endswith(suffix):
+                out_path = out_path.with_name(out_path.name[: -len(suffix)])
+
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+
+            if out_path.exists() and not overwrite:
+                raise BatchEncodingError(f"Output file already exists: {out_path}")
+
+            out_path.write_bytes(content)
+            decoded_paths.append(relative.as_posix())
+            total_bytes += len(content)
+
+        result = {
+            "mode": "separate",
+            "directory": str(directory),
+            "input": str(source_dir),
+            "output": str(directory),
+            "files": decoded_paths,
+            "count": len(decoded_paths),
+            "bytes_written": total_bytes,
+            "dry_run": False,
+        }
+
+    else:
+        raise BatchEncodingError(f"Unknown mode: {mode!r}. Use 'one' or 'separate'.")
+
+    if not quiet:
+        print(f"Batch decoded {result['count']} file(s)")
+        print(f"  Mode: {result['mode']}")
+        print(f"  Output directory: {result['output']}")
+
+    return result

@@ -4,7 +4,7 @@ Tests for xenco.batch module.
 
 import pytest
 from xenco.batch import (
-    find_files, encode_batch, decode_combined, BatchEncodingError,
+    find_files, encode_batch, decode_batch, decode_combined, BatchEncodingError,
     _make_file_header
 )
 from xenco.keyfile import KeyFile
@@ -250,3 +250,103 @@ class TestDecodeCombined:
         assert header.startswith(b"XENCO_FILE\x1f")
         assert header.endswith(b"\n")
         assert b"path/to/file.txt\x1f42" in header
+
+
+class TestDecodeBatch:
+    """Test batch decoding operations."""
+
+    def _make_keyfile(self, tmp_path):
+        """Helper to create a usable key file."""
+        source = (
+            "The quick brown fox jumps over the lazy dog. "
+            "1234567890 !@#$%^&*() "
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
+            "abcdefghijklmnopqrstuvwxyz "
+            "~`[]{}|\\;:\"<>?,./? "
+        )
+        key_path = tmp_path / "key.xenco"
+        keygen = KeyGenerator(32, 127)
+        keyfile = KeyFile.from_keygenerator(keygen, source)
+        keyfile.save(str(key_path))
+        return str(key_path)
+
+    def test_decode_batch_one(self, tmp_path):
+        """Test decoding a combined file into a directory."""
+        key_path = self._make_keyfile(tmp_path)
+        source_dir = tmp_path / "src"
+        source_dir.mkdir()
+        (source_dir / "a.txt").write_text("Hello, World!")
+        (source_dir / "b.txt").write_text("Second file")
+
+        combined = tmp_path / "combined.xenco"
+        encode_batch(source_dir, key_path, output=str(combined), mode="one", quiet=True)
+
+        out_dir = tmp_path / "decoded"
+        result = decode_batch(out_dir, key_path, input_path=str(combined), mode="one", quiet=True)
+
+        assert result["mode"] == "one"
+        assert result["count"] == 2
+        assert sorted(result["files"]) == ["a.txt", "b.txt"]
+        assert (out_dir / "a.txt").read_text() == "Hello, World!"
+        assert (out_dir / "b.txt").read_text() == "Second file"
+
+    def test_decode_batch_separate(self, tmp_path):
+        """Test decoding separate .xenco files back to originals."""
+        key_path = self._make_keyfile(tmp_path)
+        source_dir = tmp_path / "src"
+        source_dir.mkdir()
+        sub = source_dir / "sub"
+        sub.mkdir()
+        (source_dir / "a.txt").write_text("Hello")
+        (sub / "b.txt").write_text("World")
+
+        encode_batch(source_dir, key_path, mode="separate", quiet=True)
+
+        out_dir = tmp_path / "decoded"
+        result = decode_batch(out_dir, key_path, input_path=source_dir, mode="separate", quiet=True)
+
+        assert result["mode"] == "separate"
+        assert result["count"] == 2
+        assert (out_dir / "a.txt").read_text() == "Hello"
+        assert (out_dir / "sub" / "b.txt").read_text() == "World"
+
+    def test_decode_batch_dry_run(self, tmp_path):
+        """Test dry-run does not write decoded files."""
+        key_path = self._make_keyfile(tmp_path)
+        source_dir = tmp_path / "src"
+        source_dir.mkdir()
+        (source_dir / "a.txt").write_text("Hello")
+        encode_batch(source_dir, key_path, mode="separate", quiet=True)
+
+        out_dir = tmp_path / "decoded"
+        result = decode_batch(out_dir, key_path, input_path=source_dir, mode="separate", dry_run=True, quiet=True)
+
+        assert result["dry_run"] is True
+        assert result["count"] == 1
+        assert not any(out_dir.iterdir())
+
+    def test_decode_batch_overwrite(self, tmp_path):
+        """Test overwrite flag."""
+        key_path = self._make_keyfile(tmp_path)
+        source_dir = tmp_path / "src"
+        source_dir.mkdir()
+        (source_dir / "a.txt").write_text("Hello")
+        encode_batch(source_dir, key_path, mode="separate", quiet=True)
+
+        out_dir = tmp_path / "decoded"
+        out_dir.mkdir()
+        (out_dir / "a.txt").write_text("old")
+        result = decode_batch(out_dir, key_path, input_path=source_dir, mode="separate", overwrite=True, quiet=True)
+
+        assert result["count"] == 1
+        assert (out_dir / "a.txt").read_text() == "Hello"
+
+    def test_decode_batch_no_files(self, tmp_path):
+        """Test empty source directory raises error."""
+        key_path = self._make_keyfile(tmp_path)
+        source_dir = tmp_path / "src"
+        source_dir.mkdir()
+        out_dir = tmp_path / "decoded"
+
+        with pytest.raises(BatchEncodingError):
+            decode_batch(out_dir, key_path, input_path=source_dir, mode="separate", quiet=True)

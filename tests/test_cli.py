@@ -241,10 +241,15 @@ class TestCLIParser:
         ])
         assert args.dry_run is True
 
-    def test_batch_dry_run_flag(self):
-        """Test batch --dry-run flag parsing."""
+    def test_batch_decode_flag(self):
+        """Test batch --decode flag parsing."""
         parser = create_parser()
         args = parser.parse_args([
-            "batch", "-d", "src/", "-k", "test.xenco", "-N"
+            "batch", "--decode", "-d", "out/", "-k", "test.xenco",
+            "-i", "combined.xenco", "-m", "one"
         ])
-        assert args.dry_run is True
+        assert args.decode is True
+        assert args.input == "combined.xenco"
+        assert args.mode == "one"
+
+

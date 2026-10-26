@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `--dry-run` / `-N` to encode and batch commands
   - `encode -N` prints encoded output to stdout without writing any file
   - `batch -N` lists files that would be encoded and skips all writes
+- Added batch decoding with `xenco batch --decode`
+  - `mode=one` decodes a combined file back into a directory structure
+  - `mode=separate` decodes all ``.xenco`` files back to their original names
+  - New API function `decode_batch()` in `xenco.batch`
 - New `mix` CLI command and `KeyFile.mix()` API for remixing existing keys
   - `--shift`, `--reverse`, and `--seed` options to change character mappings
   - Produces a different encoding while remaining decodeable with the mixed key
