@@ -94,31 +94,31 @@ xenco mix -k mykey.xenco -o mixed.xenco --seed 12345
 
 ```bash
 # Encode each file separately (creates file.txt.xenco next to every file)
-xenco batch -d /path/to/dir -k mykey.xenco -m separate
+xenco batch -i /path/to/dir -k mykey.xenco -m separate
 
 # Encode everything into a single combined file
-xenco batch -d /path/to/dir -k mykey.xenco -o combined.xenco -m one
+xenco batch -i /path/to/dir -k mykey.xenco -o combined.xenco -m one
 
 # Write separated outputs to another directory, preserving structure
-xenco batch -d /path/to/dir -k mykey.xenco -o /path/to/out -m separate
+xenco batch -i /path/to/dir -k mykey.xenco -o /path/to/out -m separate
 
 # Only process top-level files, ignore subdirectories
-xenco batch -d /path/to/dir -k mykey.xenco --no-recursive
+xenco batch -i /path/to/dir -k mykey.xenco --no-recursive
 
 # Exclude specific files, directories, or extensions
-xenco batch -d /path/to/dir -k mykey.xenco \
+xenco batch -i /path/to/dir -k mykey.xenco \
     --exclude-file secrets.txt \
     --exclude-dir subdir \
     --exclude-ext .log --exclude-ext tmp
 
 # Dry run: list files that would be encoded without writing anything
-xenco batch -d /path/to/dir -k mykey.xenco -m separate -N
+xenco batch -i /path/to/dir -k mykey.xenco -m separate -N
 
 # Decode a combined file back into a directory
-xenco batch --decode -d /path/to/out -k mykey.xenco -i combined.xenco -m one
+xenco batch --decode -i combined.xenco -k mykey.xenco -o /path/to/out -m one
 
 # Decode separate .xenco files back into their original names
-xenco batch --decode -d /path/to/out -k mykey.xenco -i /path/to/encoded -m separate
+xenco batch --decode -i /path/to/encoded -k mykey.xenco -o /path/to/out -m separate
 ```
 
 ### `encode` - Encode Text
@@ -215,10 +215,20 @@ for relative_path, content in files:
     print(relative_path, content)
 
 # Decode a combined batch file back into a directory
-decode_batch("/path/to/out", "mykey.xenco", input_path="combined.xenco", mode="one")
+decode_batch(
+    directory="/path/to/out",
+    key_path="mykey.xenco",
+    input_path="combined.xenco",
+    mode="one"
+)
 
 # Decode separate .xenco files back into a directory
-decode_batch("/path/to/out", "mykey.xenco", input_path="/path/to/encoded", mode="separate")
+decode_batch(
+    directory="/path/to/out",
+    key_path="mykey.xenco",
+    input_path="/path/to/encoded",
+    mode="separate"
+)
 ```
 
 ### Remixing a Key

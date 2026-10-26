@@ -22,13 +22,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="xenco",
         description="Text Encoder/Decoder with Dynamic Key Generation",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  xenco keygen -s "https://example.com" -o key.xenco
-  echo "message" | xenco encode -k key.xenco
-  xenco decode -i encoded.txt -k key.xenco -o decoded.txt
-        """
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
     parser.add_argument(
@@ -194,9 +188,9 @@ Examples:
         help="Decode instead of encode"
     )
     batch_parser.add_argument(
-        "-d", "--directory",
+        "-i", "--input",
         required=True,
-        help="Directory containing files to encode/decode, or output directory when decoding"
+        help="Source directory for batch encode/decode (or combined input file for decode mode=one)"
     )
     batch_parser.add_argument(
         "-k", "--key",
@@ -204,14 +198,9 @@ Examples:
         help="Key file to use"
     )
     batch_parser.add_argument(
-        "-i", "--input",
-        default=None,
-        help="Input file for decode mode=one, or source directory for decode mode=separate"
-    )
-    batch_parser.add_argument(
         "-o", "--output",
         default=None,
-        help="Output file for encode mode=one, output directory for encode/decode mode=separate (default: same as source)"
+        help="Output file for encode mode=one, output directory for encode/decode mode=separate (default: same as input)"
     )
     batch_parser.add_argument(
         "-m", "--mode",
@@ -437,11 +426,11 @@ def cmd_batch(args) -> int:
         recursive = args.recursive and not args.no_recursive
 
         if args.decode:
-            # For decode mode, -d/--directory is the source of encoded files,
+            # For decode mode, -i/--input is the source of encoded files,
             # and -o/--output is the destination. If no output is given,
             # decoded files are written into the source directory.
-            source_dir = args.directory
-            output_dir = args.output or args.directory
+            source_dir = args.input
+            output_dir = args.output or args.input
             result = decode_batch(
                 directory=output_dir,
                 key_path=args.key,
@@ -459,7 +448,7 @@ def cmd_batch(args) -> int:
             action = "decoded"
         else:
             result = encode_batch(
-                directory=args.directory,
+                directory=args.input,
                 key_path=args.key,
                 output=args.output,
                 mode=args.mode,

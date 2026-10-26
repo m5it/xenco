@@ -147,8 +147,8 @@ def find_files(
     if not directory.is_dir():
         raise BatchEncodingError(f"Not a directory: {directory}")
 
-    skip_suffixes = skip_suffixes or ()
-    match_suffixes = match_suffixes or ()
+    skip_suffixes = tuple(skip_suffixes or ())
+    match_suffixes = tuple(match_suffixes or ())
     # Keep the historical default: skip .xenco when neither skip nor match is provided
     if not skip_suffixes and not match_suffixes:
         skip_suffixes = (".xenco",)
@@ -162,10 +162,12 @@ def find_files(
     def _include(filepath: Path) -> bool:
         if not filepath.is_file():
             return False
-        if any(str(filepath).endswith(suffix) for suffix in skip_suffixes):
-            return False
-        if match_suffixes and not any(str(filepath).endswith(suffix) for suffix in match_suffixes):
-            return False
+        if match_suffixes:
+            if not any(str(filepath).endswith(suffix) for suffix in match_suffixes):
+                return False
+        else:
+            if skip_suffixes and any(str(filepath).endswith(suffix) for suffix in skip_suffixes):
+                return False
         if _is_excluded(filepath, directory, ex_files, ex_dirs, ex_extensions):
             return False
         return True
@@ -275,9 +277,11 @@ def encode_batch(
         BatchEncodingError: If encoding fails
         KeyFileError: If the key file cannot be loaded
     """
-    directory = Path(directory).resolve()
-    if not directory.is_dir():
-        raise BatchEncodingError(f"Not a directory: {directory}")
+    source_dir = Path(directory).resolve()
+    if not source_dir.is_dir():
+        raise BatchEncodingError(f"Not a directory: {source_dir}")
+
+    output_dir = Path(output).resolve() if output else None
 
     # Load key and create encoder
     keyfile = KeyFile.load(str(key_path))
@@ -286,7 +290,7 @@ def encode_batch(
     # Find files, also skipping the key file if it happens to live inside the tree
     skip_suffixes = (suffix, ".xenco")
     files = find_files(
-        directory,
+        source_dir,
         recursive=recursive,
         skip_suffixes=skip_suffixes,
         exclude_files=exclude_files,
@@ -302,11 +306,11 @@ def encode_batch(
     if dry_run:
         # Report what would be created without writing anything
         if mode == "one":
-            output_path = Path(output) if output else Path(directory) / f"combined{suffix}"
+            output_path = Path(output) if output else source_dir / f"combined{suffix}"
             output_desc = str(output_path)
         else:
-            output_dir = Path(output) if output else directory
-            output_desc = str(output_dir)
+            dry_output_dir = output_dir if output_dir else source_dir
+            output_desc = str(dry_output_dir)
 
         if not quiet:
             print(f"DRY RUN: would encode {len(files)} file(s)")
@@ -314,13 +318,13 @@ def encode_batch(
             print(f"  Output: {output_desc}")
             print("  Files:")
             for f in files:
-                print(f"    {f.relative_to(directory).as_posix()}")
+                print(f"    {f.relative_to(source_dir).as_posix()}")
 
         return {
             "mode": mode,
-            "directory": str(directory),
+            "directory": str(source_dir),
             "output": output_desc,
-            "files": [f.relative_to(directory).as_posix() for f in files],
+            "files": [f.relative_to(source_dir).as_posix() for f in files],
             "count": len(files),
             "bytes_written": 0,
             "dry_run": True,
@@ -336,22 +340,21 @@ def encode_batch(
         if output_path.exists() and not overwrite:
             raise BatchEncodingError(f"Output file already exists: {output_path}")
 
-        combined = _build_combined_data(directory, files)
+        combined = _build_combined_data(source_dir, files)
         encoded = encoder.encode(combined, return_bytes=False)
         output_path.write_text(encoded, encoding="utf-8")
 
         result = {
             "mode": "one",
-            "directory": str(directory),
+            "directory": str(source_dir),
             "output": str(output_path),
-            "files": [f.relative_to(directory).as_posix() for f in files],
+            "files": [f.relative_to(source_dir).as_posix() for f in files],
             "count": len(files),
             "bytes_written": len(encoded.encode("utf-8")),
             "dry_run": False,
         }
 
     elif mode == "separate":
-        output_dir = Path(output) if output else None
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -367,7 +370,7 @@ def encode_batch(
             encoded = encoder.encode(content, return_bytes=False)
 
             if output_dir:
-                relative = filepath.relative_to(directory)
+                relative = filepath.relative_to(source_dir)
                 out_path = output_dir / relative
                 out_path = out_path.with_name(out_path.name + suffix)
             else:
@@ -380,15 +383,15 @@ def encode_batch(
 
             out_path.write_text(encoded, encoding="utf-8")
 
-            relative_out = out_path.relative_to(directory).as_posix() if output_dir is None else str(out_path)
+            relative_out = out_path.relative_to(source_dir).as_posix() if output_dir is None else str(out_path)
             encoded_files.append(relative_out)
             total_bytes += len(encoded.encode("utf-8"))
 
         result = {
             "mode": "separate",
-            "directory": str(directory),
+            "directory": str(source_dir),
             "output": str(output_dir) if output_dir else "same-as-source",
-            "files": [f.relative_to(directory).as_posix() for f in files],
+            "files": [f.relative_to(source_dir).as_posix() for f in files],
             "count": len(files),
             "bytes_written": total_bytes,
             "dry_run": False,
