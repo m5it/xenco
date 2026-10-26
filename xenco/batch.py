@@ -582,11 +582,6 @@ def decode_batch(
 
     elif mode == "separate":
         source_dir = Path(input_path).resolve() if input_path else directory
-        if source_dir.resolve() == directory.resolve() and output:
-            raise BatchEncodingError(
-                "Source and output directory are the same. "
-                "Use a different input directory or omit --output."
-            )
         if not source_dir.is_dir():
             raise BatchEncodingError(f"Source directory not found: {source_dir}")
 

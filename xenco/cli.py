@@ -437,11 +437,15 @@ def cmd_batch(args) -> int:
         recursive = args.recursive and not args.no_recursive
 
         if args.decode:
+            # For decode mode, -d/--directory is the source of encoded files,
+            # and -o/--output is the destination. If no output is given,
+            # decoded files are written into the source directory.
+            source_dir = args.directory
+            output_dir = args.output or args.directory
             result = decode_batch(
-                directory=args.directory,
+                directory=output_dir,
                 key_path=args.key,
-                input_path=args.input,
-                output=args.output,
+                input_path=source_dir,
                 mode=args.mode,
                 recursive=recursive,
                 overwrite=args.overwrite,
